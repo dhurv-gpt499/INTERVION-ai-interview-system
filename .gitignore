@@ -1,0 +1,18 @@
+# Environment
+interview_ai/
+.env
+
+# Models & data (large/binary)
+chroma_db/
+sessions/
+*.gguf
+*.bin
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS/Editor
+.DS_Store
+.vscode/
