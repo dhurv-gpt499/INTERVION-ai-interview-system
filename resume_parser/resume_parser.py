@@ -1,153 +1,247 @@
-import fitz 
-import spacy
-import re
 import json
-from pathlib import Path
+import re
+import requests
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+import html 
 
-nlp = spacy.load("en_core_web_sm") #using the model
+OLLAMA_URL = "http://localhost:11434/api/generate"
+MODEL_NAME = "qwen2.5:latest"
 
 def extract_text(pdf_path: str) -> str:
-    doc = fitz.open(pdf_path) # Extracting Text from PDF
-    full_text = ""
+    """Extract clean markdown from PDF using Docling."""
     
-    for page in doc:
-        full_text += page.get_text()
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = False
+    pipeline_options.do_table_structure = True
     
-    doc.close()
-    return full_text
+    converter = DocumentConverter(
+        format_options={
+            "pdf": PdfFormatOption(pipeline_options=pipeline_options)
+        }
+    )
+    
+    result = converter.convert(pdf_path)
+    return result.document.export_to_markdown()
 
-def extract_personal_info(text: str) -> dict:
-    """Extract contact info from raw resume text — name comes from user input."""
+
+def llm_extract(markdown_text: str) -> dict:
+    """Send clean markdown to Qwen2.5:7B and get structured JSON back."""
     
-    lines = text.split('\n')
-    
-    email = ""
-    phone = ""
-    github = ""
-    linkedin = ""
-    
-    for i, line in enumerate(lines):
-        line_stripped = line.strip()
-        
-        # Email — has # prefix or @ in line
-        if line_stripped.startswith('#'):
-            email_match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', line_stripped)
-            if email_match:
-                email = email_match.group()
-        elif '@' in line_stripped:
-            email_match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', line_stripped)
-            if email_match:
-                email = email_match.group()
-        
-        # Phone — has phone unicode prefix or +91
-        if line_stripped.startswith('+91') or line_stripped.startswith('\uf095'):
-            phone_match = re.search(r'\+91[\-\s]?\d{10}|\+91[\-\s]?\d{5}[\-\s]?\d{5}', line_stripped)
-            if phone_match:
-                phone = phone_match.group()
-        # fallback — line contains +91
-        if not phone and '+91' in line_stripped:
-            phone_match = re.search(r'\+91[\-\s]?\d{10}', line_stripped)
-            if phone_match:
-                phone = phone_match.group()
-        
-        # GitHub — has § prefix
-        if line_stripped.startswith('§'):
-            # Get the handle after § symbol
-            handle = line_stripped.replace('§', '').strip()
-            # Make sure it looks like a github handle not a bullet point
-            if handle and len(handle) > 3 and ' ' not in handle:
-                github = handle
-        
-        # LinkedIn — has ï prefix
-        if line_stripped.startswith('ï'):
-            handle = line_stripped.replace('ï', '').strip()
-            if handle and len(handle) > 3 and ' ' not in handle:
-                linkedin = handle
-    
-    return {
-        "email": email,
-        "phone": phone,
-        "linkedin": linkedin,
-        "github": github
+    prompt = f"""You are a resume parser. Extract information from the resume markdown below and return ONLY a valid JSON object. No explanation, no markdown, no code blocks. Just raw JSON.
+
+Important rules:
+- Return ONLY the JSON object, nothing before or after it
+- For skills languages: include ALL programming languages e.g. Python, Java, C++, SQL
+- For skills frameworks: platforms and frameworks e.g. PyTorch, TensorFlow, React, Django
+- For skills tools: tools only e.g. Git, Docker, VS Code, Linux
+- For skills databases: only databases e.g. Oracle, PostgreSQL, MongoDB
+- For skills cloud: only cloud platforms e.g. AWS, Azure, GCP
+- CGPA is out of 10 e.g. 8.3. Percentage is out of 100 e.g. 74.0. Never mix them. If value above 20 it is percentage
+- Extract ALL education entries including school and college
+- Extract ALL work experience entries even if responsibilities are empty
+- For experience year_start extract only start date. For year_end extract only end date or "Present"
+- For project descriptions include every bullet point as separate array item
+- Extract ALL certifications into achievements array as plain strings
+- Extract competitive programming profiles — leetcode, codeforces, hackerrank, codechef usernames
+- If field is missing use empty string or empty array
+
+Return exactly this structure:
+{{
+  "personal_info": {{
+    "email": "",
+    "phone": "",
+    "github": "",
+    "linkedin": ""
+  }},
+  "education": [
+    {{
+      "institution": "",
+      "degree": "",
+      "branch": "",
+      "cgpa": "",
+      "percentage": "",
+      "year_start": "",
+      "year_end": ""
+    }}
+  ],
+  "skills": {{
+    "languages": [],
+    "frameworks": [],
+    "tools": [],
+    "databases": [],
+    "cloud": []
+  }},
+  "experience": [
+    {{
+      "company": "",
+      "role": "",
+      "year_start": "",
+      "year_end": "",
+      "responsibilities": []
+    }}
+  ],
+  "projects": [
+    {{
+      "name": "",
+      "tech_stack": [],
+      "description": [],
+      "github_link": ""
+    }}
+  ],
+  "competitive_programming": {{
+    "leetcode": "",
+    "codeforces": "",
+    "hackerrank": "",
+    "codechef": ""
+  }},
+  "achievements": []
+}}
+
+Resume:
+{markdown_text}"""
+
+    payload = {
+        "model": MODEL_NAME,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.1,
+            "num_ctx": 8192
+        }
     }
 
-def extract_education(text: str) -> list:
-    """Extract all education entries from resume."""
-    
-    education = []
-    lines = text.split('\n')
-    
-    # Find education section boundaries
-    edu_start = -1
-    edu_end = -1
-    end_headers = ['experience', 'skills', 'projects', 'achievements', 
-                   'certifications', 'technical']
-    
-    for i, line in enumerate(lines):
-        line_lower = line.lower().strip()
-        if 'education' in line_lower and len(line_lower) < 20:
-            edu_start = i
-        if edu_start != -1 and i > edu_start + 2:
-            if any(header in line_lower for header in end_headers):
-                edu_end = i
-                break
-    
-    if edu_start == -1:
-        return education
+    try:
+        response = requests.post(OLLAMA_URL, json=payload, timeout=180)
+        response.raise_for_status()
         
-    edu_end = edu_end if edu_end != -1 else edu_start + 25
-    edu_lines = lines[edu_start:edu_end]
-    edu_text = '\n'.join(edu_lines)
-    
-    # Patterns
-    cgpa_pattern = r'CGPA[:\s]*(\d+\.?\d*)'
-    percentage_pattern = r'(\d{2,3}(?:\.\d{1,2})?)\s*%'
-    year_pattern = r'\b(20\d{2})\b'
-    degree_pattern = r'\b(Bachelor of Technology|B\.?Tech|Master of Technology|M\.?Tech|B\.?E|BCA|MCA|B\.?Sc|M\.?Sc|MBA|Ph\.?D)\b'
-    branch_pattern = r'\b(Computer Science Engineering|Computer Science|CSE|Information Technology|IT|Electronics|ECE|Mechanical|Civil|Data Science|AI|Machine Learning)\b'
-    
-    # Split into blocks by empty lines — each block is one education entry
-    blocks = []
-    current_block = []
-    
-    for line in edu_lines[1:]:  # skip the "Education" header line
-        if line.strip() == '':
-            if current_block:
-                blocks.append('\n'.join(current_block))
-                current_block = []
-        else:
-            current_block.append(line.strip())
-    if current_block:
-        blocks.append('\n'.join(current_block))
-    
-    for block in blocks:
-        if not block.strip():
-            continue
-            
-        doc = nlp(block)
+        raw_response = response.json()["response"].strip()
         
-        # Extract org names via spaCy
-        organizations = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
+        # Clean markdown fences
+        raw_response = re.sub(r'^```json\s*', '', raw_response)
+        raw_response = re.sub(r'^```\s*', '', raw_response)
+        raw_response = re.sub(r'\s*```$', '', raw_response)
+        raw_response = raw_response.strip()
         
-        # If spaCy missed it, take first line of block as institution
-        first_line = block.split('\n')[0].strip()
-        institution = organizations[0] if organizations else first_line
+        # Extract only JSON object
+        start = raw_response.find('{')
+        end = raw_response.rfind('}')
+        if start != -1 and end != -1:
+            raw_response = raw_response[start:end+1]
         
-        cgpa = re.findall(cgpa_pattern, block, re.IGNORECASE)
-        percentage = re.findall(percentage_pattern, block)
-        years = re.findall(year_pattern, block)
-        degrees = re.findall(degree_pattern, block, re.IGNORECASE)
-        branches = re.findall(branch_pattern, block, re.IGNORECASE)
-        
-        edu_entry = {
-            "institution": institution,
-            "degree": degrees[0] if degrees else "",
-            "branch": branches[0] if branches else "",
-            "cgpa": cgpa[0] if cgpa else "",
-            "percentage": percentage[0] if percentage else "",
-            "years": years,
-        }
-        
-        education.append(edu_entry)
+        return json.loads(raw_response)
+
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error: {e}")
+        print(f"LLM returned: {raw_response[:300]}")
+        return retry_extract(markdown_text)
     
-    return education
+    except requests.exceptions.ConnectionError:
+        print("Ollama not running! Run: ollama serve")
+        return {}
+    
+    except Exception as e:
+        print(f"Extraction error: {e}")
+        return {}
+
+
+def retry_extract(markdown_text: str) -> dict:
+    """Fallback with stricter prompt at temperature 0."""
+    
+    prompt = f"""Extract resume data as JSON only. Return nothing except the JSON object.
+
+{{
+  "personal_info": {{"email": "", "phone": "", "github": "", "linkedin": ""}},
+  "education": [{{"institution": "", "degree": "", "branch": "", "cgpa": "", "percentage": "", "year_start": "", "year_end": ""}}],
+  "skills": {{"languages": [], "frameworks": [], "tools": [], "databases": [], "cloud": []}},
+  "experience": [{{"company": "", "role": "", "year_start": "", "year_end": "", "responsibilities": []}}],
+  "projects": [{{"name": "", "tech_stack": [], "description": [], "github_link": ""}}],
+  "competitive_programming": {{"leetcode": "", "codeforces": "", "hackerrank": "", "codechef": ""}},
+  "achievements": []
+}}
+
+Resume:
+{markdown_text}"""
+
+    try:
+        response = requests.post(OLLAMA_URL, json={
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.0, "num_ctx": 8192}
+        }, timeout=180)
+        
+        raw = response.json()["response"].strip()
+        raw = re.sub(r'```(?:json)?', '', raw).strip()
+        start = raw.find('{')
+        end = raw.rfind('}')
+        if start != -1 and end != -1:
+            raw = raw[start:end+1]
+        return json.loads(raw)
+    
+    except Exception as e:
+        print(f"Retry failed: {e}")
+        return {}
+
+def post_process(markdown_text: str, parsed: dict) -> dict:
+    """Fix small consistent issues LLM gets wrong."""
+    import html
+    import re
+    
+    # Fix 1 — GitHub from markdown links
+    if not parsed["personal_info"].get("github"):
+        github_match = re.search(r'https?://github\.com/[\w\-]+', markdown_text)
+        if github_match:
+            parsed["personal_info"]["github"] = github_match.group()
+    
+    # Fix 2 — Clean HTML entities from all string values recursively
+    def clean_html(obj):
+        if isinstance(obj, str):
+            return html.unescape(obj)
+        elif isinstance(obj, list):
+            return [clean_html(i) for i in obj]
+        elif isinstance(obj, dict):
+            return {k: clean_html(v) for k, v in obj.items()}
+        return obj
+    parsed = clean_html(parsed)
+    
+    # Fix 3 — Cognizant role merged into company name
+    for exp in parsed.get("experience", []):
+        company = exp.get("company", "")
+        if not exp.get("role") and company:
+            # Common job titles that get merged into company
+            titles = ["Associate", "Analyst", "Engineer", "Manager", 
+                     "Consultant", "Developer", "Intern"]
+            for title in titles:
+                if company.endswith(title):
+                    exp["role"] = title
+                    exp["company"] = company[:-len(title)].strip().rstrip(',')
+                    break
+    
+    return parsed
+
+
+def parse_resume(pdf_path: str):
+    print("Extracting text with Docling...")
+    markdown_text = extract_text(pdf_path)
+    
+    if not markdown_text.strip():
+        print("No text extracted!")
+        return {}, ""
+    
+    print("Sending to Qwen2.5:7B for parsing...")
+    parsed = llm_extract(markdown_text)
+    
+    if not parsed:
+        return {}, markdown_text
+    
+    # Post processing
+    parsed = post_process(markdown_text, parsed)
+    
+    print("Resume parsed successfully!")
+    return parsed, markdown_text
+
+
+if __name__ == "__main__":
+    result, markdown = parse_resume("resume_parser/test_resume.pdf")
+    print(json.dumps(result, indent=2))
