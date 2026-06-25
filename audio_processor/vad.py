@@ -6,9 +6,9 @@ class SpeechSegmenter:
         self,
         speech_queue,
         on_event,                        # callback: receives event name
-        silence_frames_threshold=30,     # 3s  = 30 frames (post speech)
-        no_answer_threshold=40,          # 4s  = 40 frames (no answer)
-        max_speech_frames=80,            # 8s  = 80 frames (force chunk)
+        silence_frames_threshold=94,     # 3s  = 94 frames (post speech)
+        no_answer_threshold=125,          # 4s  = 40 frames (no answer)
+        max_speech_frames=250,            # 8s  = 80 frames (force chunk)
         vad_threshold=0.5,
     ):
         self.speech_queue = speech_queue
