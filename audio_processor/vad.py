@@ -5,57 +5,56 @@ class SpeechSegmenter:
     def __init__(
         self,
         speech_queue,
-        on_event,                        # callback: receives event name
-        silence_frames_threshold=94,     # 3s  = 94 frames (post speech)
-        no_answer_threshold=125,          # 4s  = 40 frames (no answer)
-        max_speech_frames=250,            # 8s  = 80 frames (force chunk)
-        vad_threshold=0.5,
+        on_event,
+        silence_frames_threshold = 94,   # 3s  = 94  × 32ms
+        no_answer_threshold      = 125,  # 4s  = 125 × 32ms
+        max_speech_frames        = 250,  # 8s  = 250 × 32ms
+        vad_threshold            = 0.5,
     ):
-        self.speech_queue = speech_queue
-        self.on_event = on_event         # fires: "no_answer_silence"
-                                         #        "post_speech_silence"
-                                         #        "force_chunk"
+        self.speech_queue             = speech_queue
+        self.on_event                 = on_event
 
-        self.vad_threshold = vad_threshold
+        self.vad_threshold            = vad_threshold
         self.silence_frames_threshold = silence_frames_threshold
-        self.no_answer_threshold = no_answer_threshold
-        self.max_speech_frames = max_speech_frames
+        self.no_answer_threshold      = no_answer_threshold
+        self.max_speech_frames        = max_speech_frames
 
-        self.speech_buffer = []
-        self.silence_frames = 0
-        self.speech_frames = 0
-
-        self.answer_started = False       # has candidate spoken at all?
-        self.no_answer_frames = 0         # silence counter before speech starts
+        self.speech_buffer            = []
+        self.silence_frames           = 0
+        self.speech_frames            = 0
+        self.answer_started           = False
+        self.no_answer_frames         = 0
+        self.consecutive_speech       = 0    # ← NEW: debounce noise
 
     def process_frame(self, frame, speech_probability):
         is_speech = speech_probability > self.vad_threshold
 
         if is_speech:
-            self.answer_started = True
-            self.no_answer_frames = 0     # reset no-answer counter
-
+            self.answer_started    = True
+            self.no_answer_frames  = 0
             self.speech_buffer.append(frame)
-            self.speech_frames += 1
-            self.silence_frames = 0
+            self.speech_frames    += 1
+            self.consecutive_speech += 1     # ← NEW: count consecutive
 
-            # force finalize if speech too long
+            # only reset silence counter on SUSTAINED speech (not noise blip)
+            if self.consecutive_speech >= 3: # ← NEW: 3 frames = ~96ms
+                self.silence_frames = 0
+
             if self.speech_frames >= self.max_speech_frames:
                 self._finalize("force_chunk")
 
         else:
-            # candidate hasn't spoken yet → track for "no answer" event
+            self.consecutive_speech = 0      # ← NEW: reset on silence
+
             if not self.answer_started:
                 self.no_answer_frames += 1
-
                 if self.no_answer_frames >= self.no_answer_threshold:
-                    self.no_answer_frames = 0   # reset to avoid repeated firing
+                    self.no_answer_frames = 0
                     self.on_event("no_answer_silence")
 
-            # candidate was speaking → track post-speech silence
             if self.speech_buffer:
                 self.silence_frames += 1
-                self.speech_buffer.append(frame)  # keep silence in buffer
+                self.speech_buffer.append(frame)
 
                 if self.silence_frames >= self.silence_frames_threshold:
                     self._finalize("post_speech_silence")
@@ -67,18 +66,17 @@ class SpeechSegmenter:
         audio = np.concatenate(self.speech_buffer)
         self.speech_queue.put(audio)
 
-        # reset state
         self.speech_buffer.clear()
-        self.speech_frames = 0
+        self.speech_frames  = 0
         self.silence_frames = 0
 
-        # fire event AFTER putting audio in queue
         self.on_event(event_type)
 
     def reset(self):
-        """Call this at the start of every new question."""
+        """Call at the start of every new question."""
         self.speech_buffer.clear()
-        self.speech_frames = 0
-        self.silence_frames = 0
-        self.answer_started = False
-        self.no_answer_frames = 0
+        self.speech_frames      = 0
+        self.silence_frames     = 0
+        self.answer_started     = False
+        self.no_answer_frames   = 0
+        self.consecutive_speech = 0    # ← NEW
