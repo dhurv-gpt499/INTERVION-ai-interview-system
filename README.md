@@ -113,59 +113,63 @@ Total                 →  ~5.3 GB ✅
 ```
 INTERVION/
 ├── audio_processor/
-│   ├── model_loader.py           # load Whisper + Silero VAD
-│   ├── mic_capture.py            # microphone → audio frames
-│   ├── vad.py                    # voice activity detection
-│   ├── transcriber.py            # audio → text (Hinglish)
-│   ├── tts_engine.py             # streaming text → speech
+│   ├── model_loader.py            # load Whisper + Silero VAD
+│   ├── mic_capture.py             # microphone → audio frames
+│   ├── vad.py                     # voice activity detection
+│   ├── transcriber.py             # audio → text (Hinglish)
+│   ├── tts_engine.py              # streaming text → speech
 │   ├── interview_state_machine.py # thread-safe state management
-│   └── pipeline.py               # main audio loop
+│   └── pipeline.py                # main audio loop
 │
 ├── llm_engine/
-│   ├── qwen_interviewer.py       # Qwen streaming interview logic
-│   ├── question_generator.py     # resume-aware question generation
-│   └── answer_evaluator.py       # answer scoring + feedback
+│   ├── qwen_interviewer.py        # Qwen streaming interview logic
+│   ├── question_generator.py      # resume-aware question generation
+│   └── answer_evaluator.py        # answer scoring + feedback
 │
 ├── vision/
-│   ├── webcam_capture.py         # OpenCV frame capture
-│   ├── face_analyzer.py          # MediaPipe landmarks
-│   └── anxiety_detector.py       # anxiety + confidence scoring
+│   ├── webcam_capture.py          # OpenCV frame capture
+│   ├── face_analyzer.py           # MediaPipe landmarks
+│   └── anxiety_detector.py        # anxiety + confidence scoring
 │
 ├── resume_parser/
-│   └── resume_parser.py          # PDF → structured data via Qwen
+│   └── resume_parser.py           # PDF → structured data via Qwen
 │
 ├── database/
-│   └── database.py               # SQLite session + history storage
+│   └── database.py                # SQLite session + history storage
 │
-└── utils/
-    └── cp_stats.py               # competitive programming stats
+├── utils/
+│   └── cp_stats.py                # competitive programming stats
+│
+├── install.py                     # one-click auto installer
+├── run_model.py                   # launch the app
+└── requirements.txt               # all dependencies
 ```
 
 ---
 
 ## Installation
 
+> **Only requirement: Python 3.11** — everything else installs automatically.
+
 ```bash
 # 1. Clone the repo
-git clone https://github.com/dhruv-gpt499/INTERVION.git
+git clone https://github.com/yourusername/INTERVION.git
 cd INTERVION
 
-# 2. Create virtual environment
-python -m venv interview_ai
-interview_ai\Scripts\activate   # Windows
+# 2. Run the auto-installer (does everything below automatically)
+python install.py
+```
 
-# 3. Install dependencies
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-pip install faster-whisper pyaudio edge-tts pygame
-pip install langchain langchain-community faiss-cpu
-pip install opencv-python mediapipe
+**What `install.py` does automatically:**
+- ✅ Creates Python virtual environment
+- ✅ Downloads and installs Ollama silently
+- ✅ Pulls Qwen 2.5 7B model (~4GB, one time only)
+- ✅ Installs all pip dependencies (PyTorch CUDA, Whisper, etc.)
+- ✅ Initializes the database
 
-# 4. Install and start Ollama
-# Download from https://ollama.com
-ollama pull qwen2.5:7b
-
-# 5. Run
-python audio_processor/pipeline.py
+```bash
+# 3. Start the app
+python run_model.py
 ```
 
 ---
@@ -217,10 +221,10 @@ python audio_processor/pipeline.py
 
 ## Requirements
 
-- Python 3.11
-- NVIDIA GPU with 6GB+ VRAM (CUDA 12.1)
-- Ollama installed and running
+- **Python 3.11** — [download here](https://www.python.org/downloads/release/python-3110/)
+- **NVIDIA GPU with 6GB+ VRAM** (CUDA 12.1 compatible)
 - Microphone + webcam
+- Internet connection (first run only — for model downloads)
 
 ---
 
