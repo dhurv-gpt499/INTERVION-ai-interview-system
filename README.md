@@ -147,7 +147,7 @@ INTERVION/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/INTERVION.git
+git clone https://github.com/dhruv-gpt499/INTERVION.git
 cd INTERVION
 
 # 2. Create virtual environment
