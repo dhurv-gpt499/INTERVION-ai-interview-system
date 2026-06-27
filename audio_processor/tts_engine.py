@@ -5,7 +5,7 @@ import io
 import queue
 import threading
 
-VOICE = "en-US-AriaNeural"
+VOICE = "en-US-GuyNeural"
 pygame.mixer.init()
 
 # ─── Single persistent queue + event loop for TTS ─────────────────────
