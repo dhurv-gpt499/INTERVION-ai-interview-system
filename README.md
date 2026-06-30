@@ -208,7 +208,7 @@ python run_model.py
 - [x] Real-time STT pipeline (Whisper + Silero VAD)
 - [x] Streaming TTS engine (Edge-TTS)
 - [x] Interview state machine
-- [ ] LLM interview engine (Qwen 2.5 streaming)
+- [x] LLM interview engine (Qwen 2.5 streaming)
 - [ ] RAG pipeline for resume-aware questioning
 - [ ] Webcam + anxiety detection (MediaPipe)
 - [ ] Full threading (5 concurrent threads)
