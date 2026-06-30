@@ -2,13 +2,14 @@ import numpy as np
 
 
 class SpeechSegmenter:
+    class SpeechSegmenter:
     def __init__(
         self,
         speech_queue,
         on_event,
-        silence_frames_threshold = 94,   # 3s  = 94  × 32ms
-        no_answer_threshold      = 125,  # 4s  = 125 × 32ms
-        max_speech_frames        = 250,  # 8s  = 250 × 32ms
+        silence_frames_threshold = 94,    # 3s — post speech (keep this)
+        no_answer_threshold      = 219,   # 7s — before first word  ← change this
+        max_speech_frames        = 250,   # 8s — force chunk (keep this)
         vad_threshold            = 0.5,
     ):
         self.speech_queue             = speech_queue

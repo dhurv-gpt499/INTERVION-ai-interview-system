@@ -24,6 +24,8 @@ class InterviewStateMachine:
 
     # Valid transitions — what state can go to what
     VALID_TRANSITIONS = {
+        InterviewState.IDLE : [InterviewState.QUESTION_ASKED,
+                           InterviewState.AI_SPEAKING],
         InterviewState.IDLE             : [InterviewState.QUESTION_ASKED],
         InterviewState.QUESTION_ASKED   : [InterviewState.LISTENING,
                                            InterviewState.NO_ANSWER],

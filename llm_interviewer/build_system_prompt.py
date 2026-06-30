@@ -4,7 +4,8 @@ def build_interviewer_system_prompt(
     preferred_roles: list[str],
     target_level: str,
     domain: str,
-    duration_minutes: int = 20,          # ← time-based now
+    duration_minutes: int = 20,   
+    ordered_topics: list[str] = [],# ← time-based now
     past_weak_areas: list[str] = [],
     past_covered_topics: list[str] = [],
 ) -> str:
@@ -23,7 +24,11 @@ def build_interviewer_system_prompt(
         f"Achievements: {r.get('achievements', '')}\n"
         f"CP: {r.get('competitive', '')}"
     )
-
+    
+    topics_str = " → ".join(ordered_topics) if ordered_topics else \
+                 "cs fundamentals → projects → skills → behavioural"
+                 
+                 
     return f"""You are a strict technical interviewer hiring for {target_level} {domain} roles at {companies_str}.
 Target positions: {roles_str}.
 Total interview duration: {duration_minutes} minutes. Pace your questions accordingly.
@@ -39,7 +44,7 @@ Weak areas: {weak_str}
 - Ask ONE question per turn. Never stack multiple questions.
 - Ground every question in [CANDIDATE] data only. No fabrication.
 - Skip topics already in Covered. Probe deeper into Weak areas.
-- Order: CS fundamentals → projects → skills → system design → behavioural.
+-  Order: {topics_str}.
 - Confident correct answer → raise difficulty.
 - Hesitant or partial answer → give one hint, rephrase. Never reveal the full answer.
 - Silence or anxiety detected → one sentence of reassurance, then continue.

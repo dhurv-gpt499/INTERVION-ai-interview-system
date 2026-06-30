@@ -5,13 +5,49 @@ from audio_processor.mic_capture import AudioCapture
 from audio_processor.vad import SpeechSegmenter
 from audio_processor.transcriber import transcribe
 from audio_processor.interview_state_machine import InterviewStateMachine, InterviewState
+from llm_interviewer import interviewer
 
 
-def run_pipeline():
+
+import queue
+import torch
+import audio_processor.tts_engine as tts_engine
+
+from audio_processor.model_loader import load_models
+from audio_processor.mic_capture import AudioCapture
+from audio_processor.vad import SpeechSegmenter
+from audio_processor.transcriber import transcribe
+from audio_processor.interview_state_machine import InterviewStateMachine, InterviewState
+from llm_interviewer.interviewer import QwenInterviewer
+
+
+def run_pipeline(resume_parsed: dict):
+
     whisper, silero_vad = load_models()
 
     speech_queue = queue.Queue()
-    sm = InterviewStateMachine()          # ← replaces the old dict
+    sm           = InterviewStateMachine()
+    interviewer  = QwenInterviewer()
+
+    # ----------------------------------------------------------------
+    # Start interview — TTS speaks opening question
+    # ----------------------------------------------------------------
+    print("\n[INTERVIEW STARTING]\n")
+    sm.transition(InterviewState.AI_SPEAKING)
+
+    tts_engine.stream_from_llm(
+        interviewer.start(
+            resume_parsed       = resume_parsed,
+            preferred_companies = ["Google", "Microsoft"],
+            preferred_roles     = ["ML Engineer"],
+            target_level        = "entry",
+            domain              = "software engineering",
+            duration_minutes    = 20,
+        )
+    )
+
+    sm.transition(InterviewState.QUESTION_ASKED)
+    print("Listening...\n")
 
     # ----------------------------------------------------------------
     # VAD event handler
@@ -20,26 +56,44 @@ def run_pipeline():
 
         if event == "post_speech_silence":
             sm.increment_pause()
-            sm.finalize_answer()
-            sm.transition(InterviewState.ANSWER_COMPLETE)
 
-            # pull audio from queue and transcribe final chunk
+            # transcribe FIRST — before finalizing
             if not speech_queue.empty():
                 audio = speech_queue.get()
                 text  = transcribe(audio, whisper)
                 sm.append_transcript(text)
 
-            sm.save_to_history()
+            # finalize — copies complete partial → final
+            sm.finalize_answer()
+            sm.transition(InterviewState.ANSWER_COMPLETE)
+
             print(f"\n[FINAL ANSWER] {sm.final_answer}")
             print(f"[DURATION]     {sm.answer_duration:.1f}s")
             print(f"[PAUSES]       {sm.pause_count}")
-            print(sm.status())
 
-            # reset segmenter for next question
+            # send answer to Qwen → stream response → TTS speaks
+            sm.transition(InterviewState.EVALUATING)
+            response_generator = interviewer.receive_answer(sm.final_answer)
+
+            sm.transition(InterviewState.AI_SPEAKING)
+            tts_engine.stream_from_llm(response_generator)
+            
+            # update current question in state machine
+            if interviewer.messages and interviewer.messages[-1]["role"] == "assistant":
+                    sm.set_question(interviewer.messages[-1]["content"])
+            # check if interview concluded
+            if not interviewer.is_active:
+                sm.transition(InterviewState.SESSION_COMPLETE)
+                print("\n[SESSION COMPLETE]")
+                return
+
+            # save Q&A and reset for next answer
+            sm.save_to_history()
             segmenter.reset()
+            sm.transition(InterviewState.QUESTION_ASKED)
 
         elif event == "force_chunk":
-            # mid-answer chunk — transcribe and append, don't finalize
+            # mid-answer chunk — transcribe and append only
             if not speech_queue.empty():
                 audio = speech_queue.get()
                 text  = transcribe(audio, whisper)
@@ -48,22 +102,20 @@ def run_pipeline():
 
         elif event == "no_answer_silence":
             sm.transition(InterviewState.NO_ANSWER)
-            print("\n[STATE] Candidate not responding — would comfort here")
+            print("\n[NO ANSWER] Comforting candidate...")
+
+            sm.transition(InterviewState.AI_SPEAKING)
+            tts_engine.stream_from_llm(
+                interviewer.receive_answer("...silence...")
+            )
+            sm.transition(InterviewState.QUESTION_ASKED)
 
     # ----------------------------------------------------------------
-    # Setup
+    # Setup mic + VAD
     # ----------------------------------------------------------------
     segmenter = SpeechSegmenter(speech_queue, on_event=on_event)
     mic       = AudioCapture(chunk_size=512)
-
-    # start session
-    first_question = "Tell me about yourself"
-    sm.set_question(first_question)
-    sm.transition(InterviewState.QUESTION_ASKED)
-
     mic.start()
-    print(f"\nQuestion: {first_question}")
-    print("Listening...\n")
 
     # ----------------------------------------------------------------
     # Main loop
@@ -90,6 +142,7 @@ def run_pipeline():
     except KeyboardInterrupt:
         mic.stop()
         print("\nPipeline stopped.")
+        print(f"Elapsed: {interviewer.elapsed_minutes():.1f} min")
         print("\nFull Q&A History:")
         for i, qa in enumerate(sm.qa_history):
             print(f"\nQ{i+1}: {qa['question']}")
@@ -98,4 +151,14 @@ def run_pipeline():
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    # replace with actual resume parser output
+    mock_resume = {
+        "education"   : "B.Tech Computer Science, 2025",
+        "skills"      : "Python, PyTorch, Machine Learning, FastAPI",
+        "experience"  : "Intern at XYZ Corp — deepfake detection",
+        "projects"    : "Deepfake detection using XceptionNet",
+        "achievements": "Top 5% Codeforces",
+        "competitive" : "Codeforces rating 1450"
+    }
+
+    run_pipeline(resume_parsed=mock_resume)

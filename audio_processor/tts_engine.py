@@ -1,120 +1,114 @@
-import edge_tts
 import asyncio
+import edge_tts
 import pygame
 import io
 import queue
 import threading
 
-VOICE = "en-US-GuyNeural"
+VOICE = "en-US-AndrewNeural"
 pygame.mixer.init()
 
-# ─── Single persistent queue + event loop for TTS ─────────────────────
-_tts_queue = queue.Queue()
-_loop       = asyncio.new_event_loop()
+# Queue 1: text sentences waiting to be generated
+_text_queue  = queue.Queue()
+# Queue 2: pre-generated audio ready to play
+_audio_queue = queue.Queue(maxsize=3)   # buffer max 3 sentences ahead
+
+_loop = asyncio.new_event_loop()
 
 
-async def _generate_and_play(text: str):
-    """Generate audio and play — runs inside persistent loop."""
+# ── Generator thread: text → audio bytes (runs ahead) ──────────────────
+async def _generate_audio(text: str) -> bytes:
     communicate  = edge_tts.Communicate(text, VOICE)
     audio_buffer = io.BytesIO()
-
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_buffer.write(chunk["data"])
-
     audio_buffer.seek(0)
-    pygame.mixer.music.load(audio_buffer)
-    pygame.mixer.music.play()
-
-    # async wait — doesn't block the event loop
-    while pygame.mixer.music.get_busy():
-        await asyncio.sleep(0.01)
+    return audio_buffer
 
 
-def _tts_worker():
-    """Dedicated background thread — one event loop, lives forever."""
+def _generator_worker():
     asyncio.set_event_loop(_loop)
     while True:
-        text = _tts_queue.get()
-        if text is None:            # shutdown signal
+        text = _text_queue.get()
+        if text is None:
+            _audio_queue.put(None)
             break
-        _loop.run_until_complete(_generate_and_play(text))
-        _tts_queue.task_done()
+        audio = _loop.run_until_complete(_generate_audio(text))
+        _audio_queue.put((text, audio))   # push pre-generated audio
+        _text_queue.task_done()
 
 
-# start worker thread once at import time
-_tts_thread = threading.Thread(target=_tts_worker, daemon=True)
-_tts_thread.start()
+# ── Player thread: plays pre-generated audio immediately ───────────────
+def _player_worker():
+    while True:
+        item = _audio_queue.get()
+        if item is None:
+            break
+        text, audio = item
+        pygame.mixer.music.load(audio)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            pygame.time.wait(10)
+        _audio_queue.task_done()
 
 
-# ─── Sentence extractor ────────────────────────────────────────────────
+# Start both threads
+_gen_thread    = threading.Thread(target=_generator_worker, daemon=True)
+_player_thread = threading.Thread(target=_player_worker,    daemon=True)
+_gen_thread.start()
+_player_thread.start()
+
+
+# ── Sentence extractor ─────────────────────────────────────────────────
 def _extract_sentences(buffer: str) -> tuple:
-    """
-    Scan char by char — extract complete sentences.
-    Returns (list of complete sentences, leftover buffer)
-    """
-    sentences = []
-    current   = ""
-
+    sentences, current = [], ""
     for char in buffer:
         current += char
         if char in ".!?" and current.strip():
             sentences.append(current.strip())
             current = ""
-
     return sentences, current
 
 
-# ─── Public API ────────────────────────────────────────────────────────
+# ── Public API ─────────────────────────────────────────────────────────
 def stream_from_llm(token_generator, state_machine=None):
-    """
-    Feed LLM token stream directly into TTS.
-
-    LLM keeps generating on THIS thread.
-    TTS plays on BACKGROUND thread via queue.
-    No blocking between generation and playback.
-    """
     sentence_buffer = ""
-
     if state_machine:
         state_machine.is_speaking = True
 
     for token in token_generator:
         sentence_buffer += token
-
         sentences, sentence_buffer = _extract_sentences(sentence_buffer)
-
         for sentence in sentences:
             if sentence:
                 print(f"[TTS] -> {sentence}")
-                _tts_queue.put(sentence)   # non-blocking
+                _text_queue.put(sentence)   # generator picks up immediately
 
-    # any leftover text without punctuation
     if sentence_buffer.strip():
-        _tts_queue.put(sentence_buffer.strip())
+        _text_queue.put(sentence_buffer.strip())
 
-    # wait for all queued sentences to finish playing
-    _tts_queue.join()
+    # wait for all text to be generated AND played
+    _text_queue.join()
+    _audio_queue.join()
 
     if state_machine:
         state_machine.is_speaking = False
 
 
 def speak_sync(text: str):
-    """Speak a single piece of text directly."""
-    _tts_queue.put(text)
-    _tts_queue.join()
+    _text_queue.put(text)
+    _text_queue.join()
+    _audio_queue.join()
 
 
 def stop():
-    """Stop playback immediately — call when candidate interrupts."""
     if pygame.mixer.music.get_busy():
         pygame.mixer.music.stop()
-
-    # drain the queue
-    while not _tts_queue.empty():
-        try:
-            _tts_queue.get_nowait()
-            _tts_queue.task_done()
-        except queue.Empty:
-            break
+    for q in (_text_queue, _audio_queue):
+        while not q.empty():
+            try:
+                q.get_nowait()
+                q.task_done()
+            except queue.Empty:
+                break

@@ -1,7 +1,7 @@
 import time
 import json
 import requests
-
+from llm_interviewer.question_generator import decide_categories
 OLLAMA_URL = "http://localhost:11434/api/chat"   # ← chat endpoint
 MODEL_NAME = "qwen2.5:latest"
 
@@ -25,8 +25,8 @@ class QwenInterviewer:
         past_weak_areas: list = [],
         past_covered_topics: list = [],
     ):
-        from build_system_prompt import build_interviewer_system_prompt
-
+        from .build_system_prompt import build_interviewer_system_prompt
+        ordered_topics = decide_categories(resume_parsed, target_level)
         system_prompt = build_interviewer_system_prompt(
             resume_parsed        = resume_parsed,
             preferred_companies  = preferred_companies,
@@ -34,6 +34,7 @@ class QwenInterviewer:
             target_level         = target_level,
             domain               = domain,
             duration_minutes     = duration_minutes,
+            ordered_topics       = ordered_topics,
             past_weak_areas      = past_weak_areas,
             past_covered_topics  = past_covered_topics,
         )
