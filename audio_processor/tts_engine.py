@@ -72,7 +72,7 @@ def _extract_sentences(buffer: str) -> tuple:
 
 
 # ── Public API ─────────────────────────────────────────────────────────
-def stream_from_llm(token_generator, state_machine=None):
+def stream_from_llm(token_generator, state_machine=None, on_sentence=None):
     sentence_buffer = ""
     if state_machine:
         state_machine.is_speaking = True
@@ -83,10 +83,15 @@ def stream_from_llm(token_generator, state_machine=None):
         for sentence in sentences:
             if sentence:
                 print(f"[TTS] -> {sentence}")
+                if on_sentence:
+                    on_sentence(sentence)
                 _text_queue.put(sentence)   # generator picks up immediately
 
     if sentence_buffer.strip():
-        _text_queue.put(sentence_buffer.strip())
+        sent = sentence_buffer.strip()
+        if on_sentence:
+            on_sentence(sent)
+        _text_queue.put(sent)
 
     # wait for all text to be generated AND played
     _text_queue.join()

@@ -2,7 +2,6 @@ import numpy as np
 
 
 class SpeechSegmenter:
-    class SpeechSegmenter:
     def __init__(
         self,
         speech_queue,

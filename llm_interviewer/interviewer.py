@@ -1,7 +1,8 @@
 import time
 import json
 import requests
-from llm_interviewer.question_generator import decide_categories
+from .question_generator import decide_categories
+
 OLLAMA_URL = "http://localhost:11434/api/chat"   # ← chat endpoint
 MODEL_NAME = "qwen2.5:latest"
 
@@ -26,7 +27,10 @@ class QwenInterviewer:
         past_covered_topics: list = [],
     ):
         from .build_system_prompt import build_interviewer_system_prompt
+
+        # Generate custom categories based on resume parsing
         ordered_topics = decide_categories(resume_parsed, target_level)
+
         system_prompt = build_interviewer_system_prompt(
             resume_parsed        = resume_parsed,
             preferred_companies  = preferred_companies,

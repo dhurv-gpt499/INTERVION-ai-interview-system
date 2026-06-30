@@ -1,4 +1,4 @@
-def decide_categories(resume_parsed, target_level):
+def decide_categories(resume_parsed: dict, target_level: str) -> list[str]:
     categories = {
         "dsa"           : 0,
         "projects"      : 0,
