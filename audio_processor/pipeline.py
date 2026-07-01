@@ -88,7 +88,10 @@ def run_pipeline(
             cmd, payload = llm_queue.get()
             if cmd == "stop":
                 break
-                
+
+            # Exit cleanly if stop was pressed while we were waiting
+            if is_running and not is_running():
+                break
             if cmd == "evaluate":
                 sm.transition(InterviewState.EVALUATING)
                 notify_state("evaluating")
@@ -105,10 +108,11 @@ def run_pipeline(
                 response_generator = interviewer.receive_answer(final_text)
 
                 sm.transition(InterviewState.AI_SPEAKING)
-                notify_state("ai_speaking")
+
                 tts_engine.stream_from_llm(
                     response_generator,
-                    on_sentence = lambda s: on_transcript(f"🤖: {s}") if on_transcript else None
+                    on_sentence     = lambda s: on_transcript(f"\U0001f916: {s}") if on_transcript else None,
+                    on_audio_start  = lambda: notify_state("ai_speaking"),  # fires when pygame.play() runs
                 )
 
                 # 4. Check interview state
@@ -137,10 +141,11 @@ def run_pipeline(
                 print("\n[NO ANSWER] Comforting candidate...")
 
                 sm.transition(InterviewState.AI_SPEAKING)
-                notify_state("ai_speaking")
+
                 tts_engine.stream_from_llm(
                     interviewer.receive_answer("...silence..."),
-                    on_sentence = lambda s: on_transcript(f"🤖: {s}") if on_transcript else None
+                    on_sentence     = lambda s: on_transcript(f"\U0001f916: {s}") if on_transcript else None,
+                    on_audio_start  = lambda: notify_state("ai_speaking"),
                 )
                 sm.transition(InterviewState.QUESTION_ASKED)
                 notify_state("question_asked")
@@ -158,7 +163,8 @@ def run_pipeline(
     notify_state("Loading AI Model (takes ~10s)...")
     sm.transition(InterviewState.AI_SPEAKING)
 
-    # Initial boot text
+    # Avatar switches to talking at the exact moment pygame starts playing
+    # on_audio_start fires inside the player thread when play() is called
     init_gen = interviewer.start(
         resume_parsed       = resume_parsed,
         preferred_companies = preferred_companies,
@@ -169,7 +175,8 @@ def run_pipeline(
     )
     tts_engine.stream_from_llm(
         init_gen,
-        on_sentence = lambda s: on_transcript(f"🤖: {s}") if on_transcript else None
+        on_sentence    = lambda s: on_transcript(f"\U0001f916: {s}") if on_transcript else None,
+        on_audio_start = lambda: notify_state("ai_speaking"),  # loading→interview screen flips here
     )
 
     if interviewer.messages:
@@ -224,7 +231,15 @@ def run_pipeline(
                 sm.transition(InterviewState.LISTENING)
                 notify_state("listening")
 
-            segmenter.process_frame(frame, prob)
+            # Only process mic audio when expecting candidate to speak.
+            # Prevents TTS echo from triggering false speech events while AI talks.
+            candidate_states = (
+                InterviewState.QUESTION_ASKED,
+                InterviewState.LISTENING,
+                InterviewState.CANDIDATE_PAUSED,
+            )
+            if sm.current_state in candidate_states:
+                segmenter.process_frame(frame, prob)
 
     except (KeyboardInterrupt, SystemExit):
         pass

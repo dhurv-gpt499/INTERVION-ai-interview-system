@@ -1,3 +1,9 @@
+import warnings
+warnings.filterwarnings("ignore", message=".*HTTP_422_UNPROCESSABLE_ENTITY.*")
+warnings.filterwarnings("ignore", message=".*HTTP_422_UNPROCESSABLE_CONTENT.*")
+warnings.filterwarnings("ignore", message=".*SymbolDatabase.GetPrototype.*")
+warnings.filterwarnings("ignore", message=".*theme.*Blocks constructor.*")
+
 import gradio as gr
 import threading
 import sys
@@ -6,14 +12,30 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from audio_processor.pipeline import run_pipeline
+from audio_processor import tts_engine
 from resume_parser.resume_parser import parse_resume
 
-# ── Avatar image paths ─────────────────────────────────────────────────
+# ── Avatar sprite frame sequences ──────────────────────────────────────
 ASSETS = os.path.join(os.path.dirname(__file__), "assets")
-AVATAR = {
-    "idle"      : os.path.join(ASSETS, "avatar_idle.gif"),
-    "talking"   : os.path.join(ASSETS, "avatar_talking.gif"),
-    "listening" : os.path.join(ASSETS, "avatar_listening.gif"),
+
+# Each state has a list of PNG filenames to cycle through
+AVATAR_FRAMES = {
+    # Mouth cycles fast (every tick = 10 FPS)
+    "talking"  : ["avatar_idle.png", "speak_1.png", "speak_2.png", "speak_1.png", "avatar_idle.png"],
+    # Slow blink (every 30 ticks = ~3s)
+    "idle"     : ["avatar_idle.png", "idle_1.png", "avatar_idle.png"],
+    # Attentive + occasional nod (every 20 ticks = ~2s) — using our generated male sprites only
+    "listening": ["listen_1.png", "avatar_idle.png"],
+    # Thinking look (every 15 ticks = ~1.5s)
+    "thinking" : ["avatar_idle.png", "think_0.png"],
+}
+
+# Ticks between frame advances (timer runs at 0.1s, so 10 = 1 second)
+AVATAR_RATES = {
+    "talking"  : 1,   # 10 FPS — fast mouth movement
+    "idle"     : 30,  # blink every ~3s
+    "listening": 20,  # nod every ~2s
+    "thinking" : 15,  # shift every ~1.5s
 }
 
 # ── Shared state (pipeline writes, UI reads) ──────────────────────────
@@ -27,6 +49,7 @@ shared = {
     "webcam"      : None,
     "qa_history"  : [],
     "running"     : False,
+    "frame_tick"  : 0,   # increments every poll tick for animation
 }
 
 pipeline_thread = None
@@ -36,8 +59,11 @@ def on_state_change(state_name: str):
     shared["state"] = state_name
     if state_name in ("ai_speaking",):
         shared["avatar"] = "talking"
+        shared["frame_tick"] = 0   # reset so mouth starts from frame 0
     elif state_name in ("listening", "candidate_paused"):
         shared["avatar"] = "listening"
+    elif state_name in ("evaluating",):
+        shared["avatar"] = "thinking"
     else:
         shared["avatar"] = "idle"
 
@@ -72,12 +98,11 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
 
     # reset shared state
     shared["transcript"] = ""
-    shared["state"]      = "Starting..."
+    shared["state"]      = "Parsing Resume — please wait..."
     shared["avatar"]     = "idle"
     shared["qa_history"] = []
     shared["running"]    = True
-    shared["screen"]     = "loading"
-    shared["state"]      = "Parsing Resume (takes ~15s)..."
+    shared["screen"]     = "interview"  # go straight to interview screen
 
     # run pipeline in background thread
     pipeline_thread = threading.Thread(
@@ -117,25 +142,29 @@ def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
 
 def stop_interview():
     shared["running"] = False
+    tts_engine.stop()          # ← kill audio immediately, flush queues
     shared["state"]   = "Stopped."
     shared["avatar"]  = "idle"
     shared["screen"]  = "setup"
     return "Stopped."
 
 
-# ── Polling — updates UI every second ─────────────────────────────────
+# ── Polling — updates UI every 0.1s ────────────────────────────────────
 def poll():
-    # Check if we should move from loading to interview screen
-    if shared["screen"] == "loading" and shared["running"]:
-        if shared["state"] not in ("Starting...", "Loading AI Model (takes ~10s)...", "Ready"):
-            shared["screen"] = "interview"
-
-    # Screen visibility
-    show_setup = gr.update(visible=(shared["screen"] == "setup"))
-    show_loading = gr.update(visible=(shared["screen"] == "loading"))
+    # Screen visibility — no loading screen, go straight to interview
+    show_setup     = gr.update(visible=(shared["screen"] == "setup"))
+    show_loading   = gr.update(visible=False)  # loading screen removed
     show_interview = gr.update(visible=(shared["screen"] == "interview"))
 
-    avatar_img = AVATAR.get(shared["avatar"], AVATAR["idle"])
+    # ── Avatar frame cycling ──────────────────────────────────────────
+    state    = shared["avatar"]
+    frames   = AVATAR_FRAMES.get(state, AVATAR_FRAMES["idle"])
+    rate     = AVATAR_RATES.get(state, 30)
+    tick     = shared["frame_tick"]
+    frame_idx = (tick // rate) % len(frames)
+    avatar_img = os.path.join(ASSETS, frames[frame_idx])
+    shared["frame_tick"] = tick + 1
+
     history_md = "\n\n".join(
         f"**Q{i+1}:** {qa['q']}\n\n**A:** {qa['a']}"
         for i, qa in enumerate(shared["qa_history"])
@@ -208,7 +237,7 @@ with gr.Blocks(title="INTERVION") as app:
             # Center - Avatar
             with gr.Column(scale=2, elem_id="avatar_col"):
                 avatar_img  = gr.Image(
-                                value=AVATAR["idle"],
+                                value=os.path.join(ASSETS, AVATAR_FRAMES["idle"][0]),
                                 label="Interviewer",
                                 interactive=False,
                                 show_label=False
@@ -226,7 +255,7 @@ with gr.Blocks(title="INTERVION") as app:
             history_md = gr.Markdown("No answers yet.")
 
     # ── Timer — polls shared state every second ────────────────────────
-    timer = gr.Timer(value=1)
+    timer = gr.Timer(value=0.1)  # 10 FPS for smooth avatar animation
     timer.tick(
         fn      = poll,
         outputs = [setup_screen, loading_screen, interview_screen,
