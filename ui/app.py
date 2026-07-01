@@ -65,8 +65,7 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
     if resume_file is None:
         return "Please upload a resume first."
 
-    # parse resume
-    resume_parsed, _ = parse_resume(resume_file.name)
+    file_path = resume_file.name if hasattr(resume_file, "name") else str(resume_file)
 
     companies = [c.strip() for c in companies_str.split(",") if c.strip()]
     roles     = [r.strip() for r in roles_str.split(",") if r.strip()]
@@ -77,20 +76,25 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
     shared["avatar"]     = "idle"
     shared["qa_history"] = []
     shared["running"]    = True
-    shared["screen"]     = "loading" # Show loading screen
+    shared["screen"]     = "loading"
+    shared["state"]      = "Parsing Resume (takes ~15s)..."
 
     # run pipeline in background thread
     pipeline_thread = threading.Thread(
         target      = _run_pipeline_thread,
-        args        = (resume_parsed, companies, roles, level, int(duration)),
+        args        = (file_path, companies, roles, level, int(duration)),
         daemon      = True,
     )
     pipeline_thread.start()
     return "Starting..."
 
 
-def _run_pipeline_thread(resume_parsed, companies, roles, level, duration):
+def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
     try:
+        # Move heavy parsing to background thread so UI doesn't block!
+        resume_parsed, _ = parse_resume(resume_file_path)
+        
+        shared["state"] = "Loading AI Model (takes ~10s)..."
         run_pipeline(
             resume_parsed       = resume_parsed,
             preferred_companies = companies,
@@ -152,7 +156,7 @@ def poll():
 
 
 # ── Gradio UI ─────────────────────────────────────────────────────────
-with gr.Blocks(title="INTERVION", theme=gr.themes.Soft()) as app:
+with gr.Blocks(title="INTERVION") as app:
 
     gr.Markdown("<h1 style='text-align: center;'>🎯 INTERVION — AI Interview System</h1>")
     gr.Markdown("<p style='text-align: center;'><i>Fully local AI mock interviewer powered by Whisper + Qwen 2.5</i></p>")
@@ -162,7 +166,7 @@ with gr.Blocks(title="INTERVION", theme=gr.themes.Soft()) as app:
         gr.Markdown("### ⚙️ Interview Configuration")
         with gr.Row():
             with gr.Column():
-                resume_file  = gr.File(label="Upload Resume (PDF)", file_types=[".pdf"])
+                resume_file  = gr.File(label="Upload Resume (PDF)", type="filepath")
             with gr.Column():
                 companies    = gr.Textbox(label="Target Companies",  placeholder="Google, Microsoft, Amazon")
                 roles        = gr.Textbox(label="Target Roles",      placeholder="ML Engineer, Backend Engineer")
@@ -207,8 +211,7 @@ with gr.Blocks(title="INTERVION", theme=gr.themes.Soft()) as app:
                                 value=AVATAR["idle"],
                                 label="Interviewer",
                                 interactive=False,
-                                show_label=False,
-                                show_download_button=False
+                                show_label=False
                               )
 
         # Bottom - collapsible transcript/history

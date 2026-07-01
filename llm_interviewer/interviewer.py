@@ -14,6 +14,7 @@ class QwenInterviewer:
         self.duration_sec  = 0
         self.turn_count    = 0
         self.is_active     = False
+        self.rag           = None
 
     def start(
         self,
@@ -50,6 +51,12 @@ class QwenInterviewer:
         self.turn_count   = 0
         self.is_active    = True
 
+        # Initialize and build RAG index
+        from .rag_engine import ResumeRAG
+        self.rag = ResumeRAG()
+        if resume_parsed:
+            self.rag.build_index(resume_parsed)
+
         # get opening question (streaming)
         return self._stream_response()
 
@@ -58,8 +65,19 @@ class QwenInterviewer:
         if not self.is_active:
             return
 
-        # add candidate answer to history
-        self.messages.append({"role": "user", "content": answer_text})
+        # Fetch RAG context based on what the user just said
+        rag_context = ""
+        if self.rag and self.rag.chunk_vectors is not None:
+            last_q = self.messages[-1]["content"] if self.messages else ""
+            query = f"{last_q} {answer_text}"
+            rag_context = self.rag.get_relevant_context(query)
+
+        payload = answer_text
+        if rag_context:
+            payload += f"\n\n[SYSTEM INJECTION: Use the following specific details from the candidate's resume to ground your follow-up question:]\n{rag_context}"
+
+        # add candidate answer + context to history
+        self.messages.append({"role": "user", "content": payload})
 
         # check time before responding
         if self.is_time_up():
