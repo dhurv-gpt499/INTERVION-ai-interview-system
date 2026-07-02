@@ -50,6 +50,7 @@ class QwenInterviewer:
         self.duration_sec = duration_minutes * 60
         self.turn_count   = 0
         self.is_active    = True
+        self.target_company = preferred_companies[0] if preferred_companies else ""
 
         # Initialize and build RAG index
         from .rag_engine import ResumeRAG
@@ -65,26 +66,34 @@ class QwenInterviewer:
         if not self.is_active:
             return
 
-        # Fetch RAG context based on what the user just said
-        rag_context = ""
-        if self.rag and self.rag.chunk_vectors is not None:
-            last_q = self.messages[-1]["content"] if self.messages else ""
-            query = f"{last_q} {answer_text}"
-            rag_context = self.rag.get_relevant_context(query)
-
-        payload = answer_text
-        if rag_context:
-            payload += f"\n\n[SYSTEM INJECTION: Use the following specific details from the candidate's resume to ground your follow-up question:]\n{rag_context}"
-
-        # add candidate answer + context to history
-        self.messages.append({"role": "user", "content": payload})
-
         # check time before responding
         if self.is_time_up():
             return self.send_timesup()
 
+        clean_text = answer_text.strip()
+        ephemeral_hint = ""
+
+        # Check if candidate is silent or didn't answer
+        if clean_text in ["", "no_answer", "no_answer_silence", "silence", "[SILENCE - CANDIDATE PAUSED]"]:
+            self.messages.append({"role": "user", "content": "[SILENCE - CANDIDATE PAUSED]"})
+            ephemeral_hint = (
+                "[CANDIDATE SILENCE / HESITATION DETECTED]: The candidate has paused and seems stuck on your previous question. "
+                "Do NOT change the topic or ask a new question. Using the evaluation rubric, give the candidate a brief, "
+                "supportive technical hint or simplify your previous question to help them progress."
+            )
+        else:
+            self.messages.append({"role": "user", "content": answer_text})
+            # Fetch RAG context based on what the user just said
+            rag_context = ""
+            if self.rag and getattr(self.rag, "resume_vectors", None) is not None:
+                last_q = self.messages[-2]["content"] if len(self.messages) >= 2 else ""
+                query = f"{last_q} {answer_text}"
+                rag_context = self.rag.get_relevant_context(query, target_company=getattr(self, 'target_company', ''))
+            if rag_context:
+                ephemeral_hint = f"[SYSTEM INJECTION - KNOWLEDGE GRAPH & RUBRICS]: Use the following verified details and grading standard to ground your evaluation and formulate your next probing question:\n{rag_context}"
+
         self.turn_count += 1
-        return self._stream_response()
+        return self._stream_response(ephemeral_hint=ephemeral_hint)
 
 
     def send_timesup(self):
@@ -95,10 +104,14 @@ class QwenInterviewer:
         return self._stream_response()
 
 
-    def _stream_response(self):
+    def _stream_response(self, ephemeral_hint: str = ""):
+        messages_payload = list(self.messages)
+        if ephemeral_hint:
+            messages_payload.append({"role": "system", "content": ephemeral_hint})
+
         payload = {
             "model"   : MODEL_NAME,
-            "messages": self.messages,
+            "messages": messages_payload,
             "stream"  : True,
             "options" : {
                 "temperature": 0.7,
@@ -155,7 +168,7 @@ class QwenInterviewer:
         return (time.time() - self.start_time) / 60
 
     def get_history(self) -> list:
-        """Returns Q&A pairs for database storage."""
+        """Returns Q&A pairs for database storage without ephemeral injections."""
         qa = []
         msgs = self.messages[1:]   # skip system prompt
         for i in range(0, len(msgs) - 1, 2):

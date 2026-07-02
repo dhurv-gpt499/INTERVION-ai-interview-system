@@ -44,6 +44,9 @@ Important rules:
 - For project descriptions include every bullet point as separate array item
 - Extract ALL certifications into achievements array as plain strings
 - Extract competitive programming profiles — leetcode, codeforces, hackerrank, codechef usernames
+- For candidate_archetype: classify candidate into exactly ONE primary domain e.g. "Quant & Low-Latency Systems", "Full-Stack Web Development", "AI & Machine Learning", "Data Architecture & ETL", "Cybersecurity", or "General Software Engineering"
+- For flagship_project_tech: extract an array of 5 to 10 core technical keywords from the candidate's #1 most impressive project
+- For probe_targets: identify 2 or 3 vague claims, bold architectural statements, or missing evidence from the resume that a strict FAANG/Quant interviewer should challenge
 - If field is missing use empty string or empty array
 
 Return exactly this structure:
@@ -54,6 +57,9 @@ Return exactly this structure:
     "github": "",
     "linkedin": ""
   }},
+  "candidate_archetype": "",
+  "flagship_project_tech": [],
+  "probe_targets": [],
   "education": [
     {{
       "institution": "",
@@ -152,6 +158,9 @@ def retry_extract(markdown_text: str) -> dict:
 
 {{
   "personal_info": {{"email": "", "phone": "", "github": "", "linkedin": ""}},
+  "candidate_archetype": "",
+  "flagship_project_tech": [],
+  "probe_targets": [],
   "education": [{{"institution": "", "degree": "", "branch": "", "cgpa": "", "percentage": "", "year_start": "", "year_end": ""}}],
   "skills": {{"languages": [], "frameworks": [], "tools": [], "databases": [], "cloud": []}},
   "experience": [{{"company": "", "role": "", "year_start": "", "year_end": "", "responsibilities": []}}],

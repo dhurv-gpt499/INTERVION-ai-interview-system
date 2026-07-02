@@ -1,0 +1,753 @@
+{
+  "DE Shaw": {
+    "category": "Quant & Low-Latency Finance",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "os_mutex_vs_semaphore",
+      "os_deadlock_prevention",
+      "python_gil_concurrency",
+      "memory_stack_vs_heap",
+      "dsa_dynamic_programming"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 40,
+      "DSA & Complexity": 35,
+      "Projects Deep-Dive": 25
+    }
+  },
+  "Citadel": {
+    "category": "Quant & High-Frequency Trading",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "os_mutex_vs_semaphore",
+      "oop_polymorphism_vtable",
+      "memory_stack_vs_heap",
+      "dsa_time_space_tradeoffs"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 45,
+      "Low-Level & OOP": 30,
+      "DSA & Complexity": 25
+    }
+  },
+  "Tower Research Capital": {
+    "category": "Quant & High-Frequency Trading",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "net_tcp_vs_udp_handshake",
+      "memory_stack_vs_heap",
+      "oop_polymorphism_vtable",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 45,
+      "Networking & Infrastructure": 30,
+      "Low-Level & OOP": 25
+    }
+  },
+  "Arcesium": {
+    "category": "Quant & Financial Technology",
+    "primary_focus": [
+      "dbms_btree_vs_bplustree",
+      "dbms_acid_transactions",
+      "os_threads_vs_processes",
+      "dsa_time_space_tradeoffs",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 40,
+      "OS & Concurrency": 35,
+      "DSA & Complexity": 25
+    }
+  },
+  "Bloomberg": {
+    "category": "Financial Data & Infrastructure",
+    "primary_focus": [
+      "oop_polymorphism_vtable",
+      "memory_stack_vs_heap",
+      "dsa_hashmap_collisions",
+      "data_pipeline_etl_streaming",
+      "os_mutex_vs_semaphore"
+    ],
+    "time_allocation": {
+      "Low-Level & OOP": 40,
+      "Data Architecture": 35,
+      "DSA & Complexity": 25
+    }
+  },
+  "Two Sigma": {
+    "category": "Quant & High-Frequency Trading",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "ai_llm_quantization_rag",
+      "dsa_dynamic_programming",
+      "data_pipeline_etl_streaming",
+      "sys_load_balancing_caching"
+    ],
+    "time_allocation": {
+      "AI & Machine Learning": 35,
+      "Data Architecture": 35,
+      "OS & Concurrency": 30
+    }
+  },
+  "Jane Street": {
+    "category": "Quant & Prop Trading",
+    "primary_focus": [
+      "dsa_time_space_tradeoffs",
+      "memory_stack_vs_heap",
+      "os_deadlock_prevention",
+      "dsa_dynamic_programming",
+      "net_tcp_vs_udp_handshake"
+    ],
+    "time_allocation": {
+      "DSA & Complexity": 45,
+      "OS & Concurrency": 35,
+      "Networking & Infrastructure": 20
+    }
+  },
+  "Jump Trading": {
+    "category": "Quant & High-Frequency Trading",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "net_tcp_vs_udp_handshake",
+      "memory_stack_vs_heap",
+      "oop_polymorphism_vtable",
+      "os_mutex_vs_semaphore"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 45,
+      "Networking & Infrastructure": 35,
+      "Low-Level & OOP": 20
+    }
+  },
+  "WorldQuant": {
+    "category": "Quant & Asset Management",
+    "primary_focus": [
+      "data_pipeline_etl_streaming",
+      "dbms_btree_vs_bplustree",
+      "dsa_time_space_tradeoffs",
+      "python_gil_concurrency",
+      "ai_llm_quantization_rag"
+    ],
+    "time_allocation": {
+      "Data Architecture": 40,
+      "DSA & Complexity": 35,
+      "AI & Machine Learning": 25
+    }
+  },
+  "Trexquant": {
+    "category": "Quant & Asset Management",
+    "primary_focus": [
+      "python_gil_concurrency",
+      "data_pipeline_etl_streaming",
+      "dsa_hashmap_collisions",
+      "dbms_isolation_levels",
+      "ai_llm_quantization_rag"
+    ],
+    "time_allocation": {
+      "Data Architecture": 40,
+      "OS & Concurrency": 35,
+      "AI & Machine Learning": 25
+    }
+  },
+  "Google": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "dsa_dynamic_programming",
+      "dsa_time_space_tradeoffs",
+      "dsa_hashmap_collisions",
+      "sys_load_balancing_caching",
+      "sys_cap_theorem_distributed"
+    ],
+    "time_allocation": {
+      "DSA & Complexity": 50,
+      "System Design": 30,
+      "Projects Deep-Dive": 20
+    }
+  },
+  "Meta": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "dsa_hashmap_collisions",
+      "dsa_time_space_tradeoffs",
+      "sys_load_balancing_caching",
+      "dbms_btree_vs_bplustree",
+      "sys_cap_theorem_distributed"
+    ],
+    "time_allocation": {
+      "DSA & Complexity": 45,
+      "System Design": 35,
+      "Projects Deep-Dive": 20
+    }
+  },
+  "Apple": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "memory_stack_vs_heap",
+      "oop_polymorphism_vtable",
+      "dsa_time_space_tradeoffs",
+      "sys_load_balancing_caching"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 40,
+      "Low-Level & OOP": 35,
+      "System Design": 25
+    }
+  },
+  "Amazon": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "dbms_acid_transactions",
+      "dsa_time_space_tradeoffs",
+      "dsa_hashmap_collisions",
+      "sys_cap_theorem_distributed"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "DSA & Complexity": 35,
+      "Projects Deep-Dive": 25
+    }
+  },
+  "Microsoft": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "dsa_time_space_tradeoffs",
+      "oop_polymorphism_vtable",
+      "os_threads_vs_processes",
+      "sys_load_balancing_caching",
+      "ai_llm_quantization_rag"
+    ],
+    "time_allocation": {
+      "DSA & Complexity": 40,
+      "Low-Level & OOP": 30,
+      "System Design": 30
+    }
+  },
+  "Netflix": {
+    "category": "FAANG & Big Tech",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "net_tcp_vs_udp_handshake",
+      "sys_cap_theorem_distributed",
+      "os_threads_vs_processes",
+      "data_pipeline_etl_streaming"
+    ],
+    "time_allocation": {
+      "System Design": 45,
+      "Networking & Infrastructure": 35,
+      "Distributed Systems": 20
+    }
+  },
+  "NVIDIA": {
+    "category": "AI Hardware & Big Tech",
+    "primary_focus": [
+      "ai_llm_quantization_rag",
+      "os_threads_vs_processes",
+      "memory_stack_vs_heap",
+      "python_gil_concurrency",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "AI & Machine Learning": 45,
+      "OS & Concurrency": 35,
+      "Low-Level & OOP": 20
+    }
+  },
+  "Adobe": {
+    "category": "Software & Enterprise",
+    "primary_focus": [
+      "dsa_time_space_tradeoffs",
+      "oop_polymorphism_vtable",
+      "memory_stack_vs_heap",
+      "sys_load_balancing_caching",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "DSA & Complexity": 40,
+      "Low-Level & OOP": 35,
+      "System Design": 25
+    }
+  },
+  "Salesforce": {
+    "category": "Cloud & Enterprise SaaS",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "sys_load_balancing_caching",
+      "dbms_isolation_levels",
+      "dsa_hashmap_collisions",
+      "sec_owasp_injection"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 45,
+      "System Design": 35,
+      "Cybersecurity & Systems": 20
+    }
+  },
+  "Uber": {
+    "category": "Global Tech & Logistics",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "sys_cap_theorem_distributed",
+      "net_tcp_vs_udp_handshake",
+      "dsa_hashmap_collisions",
+      "data_pipeline_etl_streaming"
+    ],
+    "time_allocation": {
+      "System Design": 45,
+      "Distributed Systems": 35,
+      "Networking & Infrastructure": 20
+    }
+  },
+  "Goldman Sachs": {
+    "category": "Investment Banking & Fintech",
+    "primary_focus": [
+      "dbms_btree_vs_bplustree",
+      "dbms_acid_transactions",
+      "dbms_isolation_levels",
+      "dsa_hashmap_collisions",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 45,
+      "DSA & Complexity": 30,
+      "Low-Level & OOP": 25
+    }
+  },
+  "Morgan Stanley": {
+    "category": "Investment Banking & Fintech",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "oop_polymorphism_vtable",
+      "os_threads_vs_processes",
+      "dsa_time_space_tradeoffs",
+      "sec_owasp_injection"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 40,
+      "Low-Level & OOP": 35,
+      "OS & Concurrency": 25
+    }
+  },
+  "JP Morgan Chase": {
+    "category": "Investment Banking & Fintech",
+    "primary_focus": [
+      "dbms_isolation_levels",
+      "sys_load_balancing_caching",
+      "sec_owasp_injection",
+      "dsa_hashmap_collisions",
+      "os_mutex_vs_semaphore"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 40,
+      "Cybersecurity & Systems": 30,
+      "System Design": 30
+    }
+  },
+  "Barclays": {
+    "category": "Investment Banking & Fintech",
+    "primary_focus": [
+      "oop_polymorphism_vtable",
+      "dbms_acid_transactions",
+      "os_threads_vs_processes",
+      "dsa_time_space_tradeoffs",
+      "memory_stack_vs_heap"
+    ],
+    "time_allocation": {
+      "Low-Level & OOP": 40,
+      "DBMS & SQL": 35,
+      "OS & Concurrency": 25
+    }
+  },
+  "Visa": {
+    "category": "Global Payments & Fintech",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "dbms_isolation_levels",
+      "sec_owasp_injection",
+      "sys_load_balancing_caching",
+      "net_tcp_vs_udp_handshake"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 45,
+      "Cybersecurity & Systems": 35,
+      "System Design": 20
+    }
+  },
+  "Mastercard": {
+    "category": "Global Payments & Fintech",
+    "primary_focus": [
+      "sec_owasp_injection",
+      "dbms_acid_transactions",
+      "sys_load_balancing_caching",
+      "net_tcp_vs_udp_handshake",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "Cybersecurity & Systems": 40,
+      "DBMS & SQL": 35,
+      "System Design": 25
+    }
+  },
+  "PayPal": {
+    "category": "Global Payments & Fintech",
+    "primary_focus": [
+      "dbms_isolation_levels",
+      "sys_load_balancing_caching",
+      "sec_owasp_injection",
+      "dsa_hashmap_collisions",
+      "os_threads_vs_processes"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 40,
+      "System Design": 35,
+      "Cybersecurity & Systems": 25
+    }
+  },
+  "Stripe": {
+    "category": "Global Payments & Fintech",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "sys_cap_theorem_distributed",
+      "sys_load_balancing_caching",
+      "sec_owasp_injection",
+      "dsa_time_space_tradeoffs"
+    ],
+    "time_allocation": {
+      "System Design": 45,
+      "DBMS & SQL": 35,
+      "Cybersecurity & Systems": 20
+    }
+  },
+  "Square / Block": {
+    "category": "Fintech & Payments",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "sys_load_balancing_caching",
+      "os_threads_vs_processes",
+      "sec_owasp_injection",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "DBMS & SQL": 35,
+      "OS & Concurrency": 25
+    }
+  },
+  "Intuit": {
+    "category": "Fintech & Financial Software",
+    "primary_focus": [
+      "dbms_btree_vs_bplustree",
+      "sys_load_balancing_caching",
+      "dsa_time_space_tradeoffs",
+      "sec_owasp_injection",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 40,
+      "System Design": 35,
+      "Low-Level & OOP": 25
+    }
+  },
+  "Oracle": {
+    "category": "Enterprise Database & Cloud",
+    "primary_focus": [
+      "dbms_btree_vs_bplustree",
+      "dbms_acid_transactions",
+      "dbms_isolation_levels",
+      "sys_load_balancing_caching",
+      "os_threads_vs_processes"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 50,
+      "System Design": 30,
+      "OS & Concurrency": 20
+    }
+  },
+  "Cloudflare": {
+    "category": "Cloud & Network Infrastructure",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "sec_owasp_injection",
+      "sys_load_balancing_caching",
+      "memory_stack_vs_heap",
+      "net_tcp_vs_udp_handshake"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 40,
+      "Cybersecurity & Systems": 35,
+      "Networking & Infrastructure": 25
+    }
+  },
+  "Cisco Systems": {
+    "category": "Networking & Infrastructure",
+    "primary_focus": [
+      "net_tcp_vs_udp_handshake",
+      "os_threads_vs_processes",
+      "memory_stack_vs_heap",
+      "sec_owasp_injection",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "Networking & Infrastructure": 45,
+      "OS & Concurrency": 35,
+      "Low-Level & OOP": 20
+    }
+  },
+  "Palo Alto Networks": {
+    "category": "Cybersecurity & Enterprise",
+    "primary_focus": [
+      "sec_owasp_injection",
+      "net_tcp_vs_udp_handshake",
+      "os_threads_vs_processes",
+      "memory_stack_vs_heap",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "Cybersecurity & Systems": 50,
+      "Networking & Infrastructure": 30,
+      "OS & Concurrency": 20
+    }
+  },
+  "Datadog": {
+    "category": "Cloud Monitoring & Infrastructure",
+    "primary_focus": [
+      "data_pipeline_etl_streaming",
+      "sys_cap_theorem_distributed",
+      "sys_load_balancing_caching",
+      "os_threads_vs_processes",
+      "net_tcp_vs_udp_handshake"
+    ],
+    "time_allocation": {
+      "Data Architecture": 40,
+      "Distributed Systems": 35,
+      "Networking & Infrastructure": 25
+    }
+  },
+  "Snowflake": {
+    "category": "Cloud Database & Analytics",
+    "primary_focus": [
+      "dbms_btree_vs_bplustree",
+      "dbms_isolation_levels",
+      "sys_cap_theorem_distributed",
+      "data_pipeline_etl_streaming",
+      "os_threads_vs_processes"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 45,
+      "Distributed Systems": 35,
+      "Data Architecture": 20
+    }
+  },
+  "MongoDB": {
+    "category": "Cloud Database & NoSQL",
+    "primary_focus": [
+      "sys_cap_theorem_distributed",
+      "dbms_btree_vs_bplustree",
+      "dbms_isolation_levels",
+      "sys_load_balancing_caching",
+      "os_mutex_vs_semaphore"
+    ],
+    "time_allocation": {
+      "Distributed Systems": 45,
+      "DBMS & SQL": 35,
+      "System Design": 20
+    }
+  },
+  "VMware": {
+    "category": "Virtualization & Cloud",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "os_virtual_memory_paging",
+      "memory_stack_vs_heap",
+      "net_tcp_vs_udp_handshake",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 50,
+      "Networking & Infrastructure": 30,
+      "Low-Level & OOP": 20
+    }
+  },
+  "Red Hat": {
+    "category": "Linux & Enterprise Cloud",
+    "primary_focus": [
+      "os_threads_vs_processes",
+      "os_virtual_memory_paging",
+      "net_tcp_vs_udp_handshake",
+      "sec_owasp_injection",
+      "memory_stack_vs_heap"
+    ],
+    "time_allocation": {
+      "OS & Concurrency": 50,
+      "Networking & Infrastructure": 30,
+      "Cybersecurity & Systems": 20
+    }
+  },
+  "Akamai Technologies": {
+    "category": "CDN & Cloud Security",
+    "primary_focus": [
+      "net_tcp_vs_udp_handshake",
+      "sys_load_balancing_caching",
+      "sec_owasp_injection",
+      "os_threads_vs_processes",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "Networking & Infrastructure": 45,
+      "System Design": 35,
+      "Cybersecurity & Systems": 20
+    }
+  },
+  "Flipkart": {
+    "category": "E-Commerce & Product Giant",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "dbms_acid_transactions",
+      "dsa_time_space_tradeoffs",
+      "dsa_hashmap_collisions",
+      "data_pipeline_etl_streaming"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "DSA & Complexity": 35,
+      "DBMS & SQL": 25
+    }
+  },
+  "Zomato": {
+    "category": "Food Tech & Real-Time Logistics",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "data_pipeline_etl_streaming",
+      "dbms_isolation_levels",
+      "dsa_hashmap_collisions",
+      "net_tcp_vs_udp_handshake"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "Data Architecture": 35,
+      "Networking & Infrastructure": 25
+    }
+  },
+  "Swiggy": {
+    "category": "Food Tech & Real-Time Logistics",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "data_pipeline_etl_streaming",
+      "dbms_btree_vs_bplustree",
+      "dsa_dynamic_programming",
+      "sys_cap_theorem_distributed"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "Data Architecture": 35,
+      "Distributed Systems": 25
+    }
+  },
+  "Razorpay": {
+    "category": "Fintech & Payments Giant",
+    "primary_focus": [
+      "dbms_acid_transactions",
+      "dbms_isolation_levels",
+      "sec_owasp_injection",
+      "sys_load_balancing_caching",
+      "dsa_hashmap_collisions"
+    ],
+    "time_allocation": {
+      "DBMS & SQL": 45,
+      "Cybersecurity & Systems": 30,
+      "System Design": 25
+    }
+  },
+  "Atlassian": {
+    "category": "Enterprise SaaS & Collaboration",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "sys_cap_theorem_distributed",
+      "dsa_time_space_tradeoffs",
+      "dbms_acid_transactions",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "Distributed Systems": 35,
+      "DSA & Complexity": 25
+    }
+  },
+  "LinkedIn": {
+    "category": "Social Network & Enterprise",
+    "primary_focus": [
+      "data_pipeline_etl_streaming",
+      "sys_load_balancing_caching",
+      "sys_cap_theorem_distributed",
+      "dsa_time_space_tradeoffs",
+      "dbms_btree_vs_bplustree"
+    ],
+    "time_allocation": {
+      "Data Architecture": 40,
+      "System Design": 35,
+      "Distributed Systems": 25
+    }
+  },
+  "Airbnb": {
+    "category": "Global Travel & E-Commerce",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "dbms_isolation_levels",
+      "dsa_time_space_tradeoffs",
+      "data_pipeline_etl_streaming",
+      "sec_owasp_injection"
+    ],
+    "time_allocation": {
+      "System Design": 45,
+      "DBMS & SQL": 35,
+      "Data Architecture": 20
+    }
+  },
+  "Expedia": {
+    "category": "Global Travel & E-Commerce",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "dbms_btree_vs_bplustree",
+      "dsa_hashmap_collisions",
+      "net_tcp_vs_udp_handshake",
+      "oop_polymorphism_vtable"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "DBMS & SQL": 35,
+      "DSA & Complexity": 25
+    }
+  },
+  "McKinsey / Tech Consulting": {
+    "category": "Technical Consulting",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "dbms_acid_transactions",
+      "sec_owasp_injection",
+      "data_pipeline_etl_streaming",
+      "ai_llm_quantization_rag"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "Projects Deep-Dive": 35,
+      "AI & Machine Learning": 25
+    }
+  },
+  "Boston Consulting Group (BCG)": {
+    "category": "Technical Consulting",
+    "primary_focus": [
+      "sys_load_balancing_caching",
+      "data_pipeline_etl_streaming",
+      "ai_llm_quantization_rag",
+      "dbms_btree_vs_bplustree",
+      "sec_owasp_injection"
+    ],
+    "time_allocation": {
+      "System Design": 40,
+      "Projects Deep-Dive": 35,
+      "Data Architecture": 25
+    }
+  }
+}

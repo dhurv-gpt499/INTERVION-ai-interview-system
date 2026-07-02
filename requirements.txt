@@ -1,0 +1,23 @@
+# Core Data & Math (Pinned to prevent NumPy 2.0 C-ABI incompatibilities)
+numpy==1.26.4
+protobuf==4.25.3
+
+# Vision & Computer Graphics (Pinned to ensure complete .solutions binary wheels on Win 3.11/3.12)
+opencv-python>=4.8.0.76
+mediapipe==0.10.14
+
+# Audio Capture & Low-Latency Playback
+PyAudio>=0.2.14
+pygame==2.6.1
+
+# Speech-to-Text & Text-to-Speech Engines
+faster-whisper>=1.0.3
+edge-tts>=6.1.10
+
+# Zero-VRAM RAG Indexing & Document Parsing
+scikit-learn>=1.3.2
+docling>=2.0.0
+
+# Network & Real-time UI Dashboard
+requests>=2.31.0
+gradio>=4.40.0

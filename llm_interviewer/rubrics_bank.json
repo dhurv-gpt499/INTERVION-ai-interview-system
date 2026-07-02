@@ -1,0 +1,200 @@
+{
+  "os_threads_vs_processes": {
+    "domain": "OS & Concurrency",
+    "keywords": ["thread", "process", "concurrency", "multithreading", "context switch", "address space", "stack", "heap", "tlb"],
+    "core_question": "Can you explain the fundamental architectural differences between an OS process and a thread, specifically regarding memory allocation and context switching?",
+    "evaluation_rubric": [
+      "Must state that processes have independent virtual memory address spaces (private heap and data), whereas threads within the same process share heap, static data, and open files but maintain private execution stacks and CPU registers.",
+      "Must explain that thread context switching is significantly faster than process switching because the Translation Lookaside Buffer (TLB) and CPU cache do not need to be flushed when switching threads of the same process.",
+      "Bonus: Mentions inter-process communication (IPC) overhead vs inter-thread synchronization risks (race conditions)."
+    ],
+    "follow_up_probe": "If one thread in a multi-threaded application encounters a segmentation fault or unhandled kernel exception, what happens to the remaining threads and the overall process architecture?"
+  },
+  "os_mutex_vs_semaphore": {
+    "domain": "OS & Concurrency",
+    "keywords": ["mutex", "semaphore", "lock", "synchronization", "race condition", "critical section", "binary semaphore", "signaling"],
+    "core_question": "In concurrent programming, what is the exact operational difference between a Mutex and a Semaphore, and when would you choose one over the other?",
+    "evaluation_rubric": [
+      "Must identify that a Mutex (Mutual Exclusion object) is an ownership-based locking mechanism designed to protect a single critical section, where only the thread that acquired the mutex can release it.",
+      "Must explain that a Semaphore is a signaling mechanism with an integer counter used to control access to a finite pool of resources, where any thread can signal (increment) or wait (decrement) the semaphore.",
+      "Bonus: Clarifies that a binary semaphore is not identical to a mutex because it lacks priority inheritance and thread ownership tracking."
+    ],
+    "follow_up_probe": "What is priority inversion in real-time operating systems when using mutexes, and how does priority inheritance solve this deadlock scenario?"
+  },
+  "os_deadlock_prevention": {
+    "domain": "OS & Concurrency",
+    "keywords": ["deadlock", "coffman", "mutual exclusion", "hold and wait", "no preemption", "circular wait", "bankers algorithm", "starvation"],
+    "core_question": "What are the four necessary Coffman conditions for a deadlock to occur in a multithreaded system, and how can an engineer architecturally break one of them to prevent deadlocks?",
+    "evaluation_rubric": [
+      "Must list all four Coffman conditions: 1) Mutual Exclusion, 2) Hold and Wait, 3) No Preemption, and 4) Circular Wait.",
+      "Must explain at least one practical prevention strategy, such as enforcing a strict global ordering on lock acquisition to eliminate Circular Wait.",
+      "Bonus: Mentions the difference between deadlock avoidance (e.g., Dijkstra's Banker's Algorithm) and deadlock detection/recovery."
+    ],
+    "follow_up_probe": "If you are designing a high-frequency trading matching engine where two accounts must be locked simultaneously to process a transfer, how do you prevent circular wait deadlocks without degrading throughput?"
+  },
+  "python_gil_concurrency": {
+    "domain": "OS & Concurrency",
+    "keywords": ["gil", "global interpreter lock", "python", "multiprocessing", "cpu bound", "io bound", "cpython", "threading"],
+    "core_question": "How does the Python Global Interpreter Lock (GIL) impact multithreaded applications in CPython, and how should an engineer choose between threading and multiprocessing?",
+    "evaluation_rubric": [
+      "Must explain that the GIL is a mutex that prevents multiple native OS threads from executing Python bytecodes simultaneously in CPython, making multithreading ineffective for CPU-bound parallelism.",
+      "Must state that Python threading is still highly effective for I/O-bound tasks (network calls, disk I/O, database queries) because the GIL is released during blocking I/O operations.",
+      "Must conclude that CPU-bound parallel processing in Python requires the multiprocessing module (separate OS processes with independent memory and GILs) or native C/CUDA extensions."
+    ],
+    "follow_up_probe": "In Python 3.13+, PEP 703 introduces an experimental 'free-threaded' no-GIL mode. What are the primary architectural trade-offs and reference-counting overheads involved in removing the GIL?"
+  },
+  "dbms_btree_vs_bplustree": {
+    "domain": "DBMS & SQL",
+    "keywords": ["btree", "bplustree", "b+ tree", "index", "indexing", "database", "leaf node", "sequential access", "range query", "disk io"],
+    "core_question": "Why do relational database engines like MySQL and PostgreSQL almost exclusively use B+ Trees instead of standard B-Trees for database table indexing?",
+    "evaluation_rubric": [
+      "Must state that in a standard B-Tree, data pointers/values can be stored in both internal and leaf nodes, whereas in a B+ Tree, all data records/pointers reside exclusively in the leaf nodes, with internal nodes storing only routing keys.",
+      "Must explain that because B+ Tree internal nodes do not store data payloads, they have a much higher branching factor (fan-out), allowing more keys per disk page and reducing overall disk I/O height.",
+      "Must highlight that B+ Tree leaf nodes are linked together via sequential pointers (linked list), making range queries and sequential scans significantly faster than B-Tree in-order traversals."
+    ],
+    "follow_up_probe": "If an SQL table has a composite B+ Tree index on columns (last_name, first_name, age), why does a query filtering WHERE first_name = 'John' AND age = 30 fail to utilize the index efficiently?"
+  },
+  "dbms_acid_transactions": {
+    "domain": "DBMS & SQL",
+    "keywords": ["acid", "atomicity", "consistency", "isolation", "durability", "transaction", "rollback", "commit", "wal", "write ahead log"],
+    "core_question": "Can you break down the four ACID properties of relational database transactions, explaining specifically how database engines guarantee Atomicity and Durability during a system crash?",
+    "evaluation_rubric": [
+      "Must accurately define all four properties: Atomicity (all-or-nothing execution), Consistency (maintaining database invariants and constraints), Isolation (concurrent transactions execute without interference), and Durability (committed changes survive power/system failures).",
+      "Must explain that Atomicity is achieved via undo logs (or rollback segments), which restore modified database blocks to their previous state if a transaction aborts.",
+      "Must explain that Durability is guaranteed through Write-Ahead Logging (WAL), where transaction modifications are sequentially flushed to non-volatile disk storage before updating the actual database pages."
+    ],
+    "follow_up_probe": "What is group commit in database logging architecture, and how does it optimize disk I/O throughput for high-concurrency transaction processing?"
+  },
+  "dbms_isolation_levels": {
+    "domain": "DBMS & SQL",
+    "keywords": ["isolation level", "dirty read", "non repeatable read", "phantom read", "read committed", "repeatable read", "serializable", "mvcc"],
+    "core_question": "What are the standard SQL transaction isolation levels, and what specific concurrency phenomena (such as dirty reads, non-repeatable reads, and phantom reads) does each level prevent?",
+    "evaluation_rubric": [
+      "Must identify the four standard levels in order of increasing rigor: Read Uncommitted, Read Committed, Repeatable Read, and Serializable.",
+      "Must define dirty reads (reading uncommitted changes from another transaction), non-repeatable reads (a row value changes when queried twice within the same transaction due to concurrent updates), and phantom reads (new rows appearing or disappearing in range queries due to concurrent inserts/deletes).",
+      "Must note that modern engines like PostgreSQL use Multi-Version Concurrency Control (MVCC) with snapshots to prevent locking bottlenecks during read operations."
+    ],
+    "follow_up_probe": "Under MVCC (Multi-Version Concurrency Control), how does PostgreSQL implement Repeatable Read isolation without acquiring shared read locks on every row in a table?"
+  },
+  "dsa_time_space_tradeoffs": {
+    "domain": "DSA & Complexity",
+    "keywords": ["big o", "time complexity", "space complexity", "tradeoff", "optimization", "caching", "memoization", "auxiliary space", "in place"],
+    "core_question": "In algorithmic engineering, how do you evaluate when to trade auxiliary space complexity for execution time complexity? Can you give a real-world architectural example of this trade-off?",
+    "evaluation_rubric": [
+      "Must explain that time-space trade-offs involve using extra memory structures (hash maps, lookup tables, caching, memoization arrays) to reduce computational time complexity (e.g., reducing O(N^2) nested loops to O(N) linear lookups).",
+      "Must highlight practical constraints: while memory is cheap, L1/L2/L3 CPU cache locality and RAM bandwidth limits can cause high-memory algorithms to suffer from frequent cache misses or page swapping.",
+      "Bonus: Mentions real-world systems examples like Bloom filters, Rainbow tables in cryptography, or TF-IDF sparse indexing vs deep vector embeddings."
+    ],
+    "follow_up_probe": "Why is Merge Sort preferred over Quick Sort for sorting external data sets on disk or linked lists, despite Quick Sort having superior in-place auxiliary space complexity O(log N) in RAM?"
+  },
+  "dsa_dynamic_programming": {
+    "domain": "DSA & Complexity",
+    "keywords": ["dynamic programming", "dp", "memoization", "tabulation", "overlapping subproblems", "optimal substructure", "state transition", "top down", "bottom up"],
+    "core_question": "What two fundamental mathematical properties must a problem exhibit to be solvable via Dynamic Programming, and how do you choose between top-down memoization and bottom-up tabulation?",
+    "evaluation_rubric": [
+      "Must identify the two prerequisite properties: 1) Overlapping Subproblems (the same subproblems are solved repeatedly) and 2) Optimal Substructure (an optimal solution to the overall problem can be constructed from optimal solutions to its subproblems).",
+      "Must differentiate Top-Down Memoization (recursive execution that computes and caches only required states on demand, but incurs call-stack overhead) from Bottom-Up Tabulation (iterative execution filling a table from base cases up, avoiding recursion stack overflow and improving CPU cache locality).",
+      "Bonus: Demonstrates ability to optimize space complexity in tabulation by retaining only the immediately preceding state row/variables (e.g., O(N) to O(1) space)."
+    ],
+    "follow_up_probe": "When solving the 0/1 Knapsack problem with weights that are floating-point numbers instead of integers, why does standard tabular Dynamic Programming fail, and what algorithmic paradigm must you switch to?"
+  },
+  "dsa_hashmap_collisions": {
+    "domain": "DSA & Complexity",
+    "keywords": ["hashmap", "hash table", "collision", "chaining", "open addressing", "linear probing", "load factor", "reallocate", "rehashing", "o(1)"],
+    "core_question": "How does a Hash Table achieve O(1) average-time complexity for lookups, what causes hash collisions, and how do chaining vs open addressing compare in high-load scenarios?",
+    "evaluation_rubric": [
+      "Must explain that a hash function converts arbitrary keys into array indices, allowing direct memory access in O(1) average time.",
+      "Must define hash collisions (when two distinct keys hash to the same bucket index) and explain Chaining (storing colliding elements in a linked list or self-balancing BST at each bucket) vs Open Addressing / Linear Probing (searching sequential slots for the next empty bucket).",
+      "Must explain the significance of the Load Factor (number of elements / bucket count) and automatic rehashing/resizing when threshold exceeds ~0.75 to prevent lookup degradation to O(N)."
+    ],
+    "follow_up_probe": "Why does Java 8+ HashMap automatically convert bucket linked lists into Red-Black Trees when collision chain length exceeds 8 items, and what vulnerability does this prevent?"
+  },
+  "oop_polymorphism_vtable": {
+    "domain": "Low-Level & OOP",
+    "keywords": ["polymorphism", "virtual function", "vtable", "vptr", "dynamic dispatch", "inheritance", "abstract class", "override", "runtime"],
+    "core_question": "In object-oriented languages like C++, how is runtime polymorphism implemented under the hood using virtual tables (vtables), and what is the exact memory and performance overhead?",
+    "evaluation_rubric": [
+      "Must explain that when a class declares virtual functions, the compiler generates a static array of function pointers called the virtual table (vtable) for that class.",
+      "Must state that every instantiated object of that class contains an hidden pointer (vptr) pointing to the class vtable, enabling dynamic method resolution (dynamic dispatch) at runtime.",
+      "Must identify the overheads: an extra pointer (8 bytes on 64-bit systems) per object for vptr, memory storage for the vtable itself, and an indirect memory lookup plus potential instruction cache misses during function calls."
+    ],
+    "follow_up_probe": "Why should a base class with virtual functions in C++ always declare a virtual destructor, and what memory corruption occurs if the destructor is left non-virtual?"
+  },
+  "memory_stack_vs_heap": {
+    "domain": "Low-Level & OOP",
+    "keywords": ["stack", "heap", "memory allocation", "memory leak", "raii", "smart pointer", "unique_ptr", "shared_ptr", "fragmentation", "garbage collection"],
+    "core_question": "What are the structural and performance differences between Stack memory allocation and Heap memory allocation, and how do modern systems prevent memory leaks?",
+    "evaluation_rubric": [
+      "Must explain that Stack allocation is contiguous, LIFO-ordered, managed automatically via stack pointer arithmetic (O(1) execution), and limited in size, making it ideal for local variables and function frames.",
+      "Must explain that Heap allocation is dynamic, globally accessible across threads, managed via OS syscalls/allocators (malloc/new), and subject to memory fragmentation and manual allocation overhead.",
+      "Must explain leak prevention paradigms: RAII (Resource Acquisition Is Initialization) and Smart Pointers (unique_ptr, shared_ptr reference counting) in C++, versus automated Garbage Collection (mark-and-sweep or generational GC) in languages like Java/Python."
+    ],
+    "follow_up_probe": "When using std::shared_ptr in C++, how can a cyclic reference between two objects cause a permanent memory leak, and how does std::weak_ptr resolve this architectural flaw?"
+  },
+  "sys_load_balancing_caching": {
+    "domain": "System Design",
+    "keywords": ["load balancer", "caching", "horizontal scaling", "vertical scaling", "redis", "memcached", "round robin", "consistent hashing", "latency", "throughput"],
+    "core_question": "When architecting a high-traffic backend web service, how do you evaluate Horizontal vs Vertical scaling, and where would you integrate caching layers to minimize database latency?",
+    "evaluation_rubric": [
+      "Must differentiate Vertical Scaling (scaling up hardware resources of a single machine, limited by hardware ceilings and single-point-of-failure risks) from Horizontal Scaling (adding commodity servers behind a Load Balancer, providing limitless elasticity and high availability).",
+      "Must explain strategic caching placement: Content Delivery Networks (CDNs) at the edge for static assets, application-level in-memory caches (Redis / Memcached) for database query results and user sessions, and database buffer pools.",
+      "Bonus: Mentions cache invalidation strategies (Cache-Aside vs Write-Through vs Write-Back) and consistent hashing for distributing cache keys across cluster nodes."
+    ],
+    "follow_up_probe": "If a viral event causes a massive traffic spike on a single popular item in your e-commerce database, how do you prevent 'cache stampede' (thundering herd) when that item's Redis cache key expires?"
+  },
+  "sec_owasp_injection": {
+    "domain": "Cybersecurity & Systems",
+    "keywords": ["sql injection", "xss", "owasp", "sanitization", "parameterized query", "prepared statement", "cross site scripting", "input validation", "security"],
+    "core_question": "How do SQL Injection and Cross-Site Scripting (XSS) vulnerabilities occur in web applications, and what are the industry-standard engineering defenses against them?",
+    "evaluation_rubric": [
+      "Must explain that SQL Injection occurs when untrusted user input is directly concatenated into dynamic SQL query strings, allowing attackers to manipulate query logic or execute arbitrary database commands.",
+      "Must state that the primary, infallible defense against SQL Injection is using Parameterized Queries (Prepared Statements) or ORMs, which treat user input strictly as typed data payloads rather than executable query syntax.",
+      "Must explain that XSS occurs when malicious JavaScript scripts are injected into web pages viewed by other users, defended via context-aware HTML output encoding/escaping and strict Content Security Policies (CSP)."
+    ],
+    "follow_up_probe": "Why is client-side input validation in JavaScript considered insufficient for preventing OWASP injection attacks, and what is a Stored XSS attack compared to a Reflected XSS attack?"
+  },
+  "net_tcp_vs_udp_handshake": {
+    "domain": "Networking & Infrastructure",
+    "keywords": ["tcp", "udp", "handshake", "three way handshake", "syn", "ack", "latency", "packet loss", "congestion control", "streaming"],
+    "core_question": "How does the TCP 3-way handshake guarantee reliable connection-oriented communication, and why do modern low-latency real-time applications (like multiplayer games or video streaming) prefer UDP?",
+    "evaluation_rubric": [
+      "Must explain the TCP 3-way handshake sequence: SYN (client requests connection), SYN-ACK (server acknowledges and synchronizes sequence numbers), and ACK (client confirms connection establishment).",
+      "Must explain that TCP enforces reliability, ordered packet delivery, and congestion control via retransmissions and sliding windows, which introduces latency and packet-head-of-line blocking.",
+      "Must contrast UDP as a connectionless, stateless protocol with zero handshake overhead and no retransmissions, making it ideal for real-time streaming where dropping an occasional frame is preferable to buffering delay."
+    ],
+    "follow_up_probe": "What is a SYN Flood DDoS attack against a TCP server, and how do TCP SYN Cookies allow an operating system kernel to mitigate the attack without allocating memory for half-open connections?"
+  },
+  "sys_cap_theorem_distributed": {
+    "domain": "Distributed Systems",
+    "keywords": ["cap theorem", "consistency", "availability", "partition tolerance", "eventual consistency", "strong consistency", "split brain", "consensus", "paxos", "raft"],
+    "core_question": "In distributed database architecture, what does the CAP theorem state regarding Consistency, Availability, and Partition Tolerance, and why must all modern distributed systems prioritize Partition Tolerance?",
+    "evaluation_rubric": [
+      "Must define the three CAP properties: Consistency (every read receives the most recent write or an error), Availability (every non-failing node returns a non-error response), and Partition Tolerance (the system continues operating despite network message drops or delays between nodes).",
+      "Must explain that because physical network partitions (packet loss, router failures, datacenter splits) are unavoidable in real-world networks, a distributed system must choose between CP (sacrificing availability during a split) and AP (sacrificing strong consistency for eventual consistency).",
+      "Bonus: Mentions consensus algorithms like Raft or Paxos used in CP systems (e.g., etcd, ZooKeeper) vs Cassandra/DynamoDB in AP systems."
+    ],
+    "follow_up_probe": "What is the PACELC theorem, and how does it extend the CAP theorem to account for latency vs consistency trade-offs during normal operations when no network partitions exist?"
+  },
+  "ai_llm_quantization_rag": {
+    "domain": "AI & Machine Learning",
+    "keywords": ["llm", "quantization", "int4", "int8", "fp16", "rag", "retrieval augmented generation", "transformer", "attention mechanism", "vram", "kv cache"],
+    "core_question": "When deploying Large Language Models locally on consumer hardware, how does weight quantization (such as INT8 or 4-bit Q4) reduce VRAM consumption, and what is the architectural tradeoff with model perplexity?",
+    "evaluation_rubric": [
+      "Must explain that quantization converts floating-point weights (FP16/FP32, 2/4 bytes per parameter) into lower-precision integer representations (INT8 or 4-bit INT4, 1 or 0.5 bytes per parameter), drastically reducing VRAM memory requirements (e.g., a 7B model drops from 14GB in FP16 to ~4.3GB in Q4).",
+      "Must state that while quantization enables models to fit into smaller GPU VRAM and improves memory bandwidth throughput, extreme quantization (below 4-bit) can degrade reasoning accuracy and increase perplexity due to quantization noise.",
+      "Must explain how Retrieval-Augmented Generation (RAG) complements quantized local LLMs by injecting external domain knowledge into the context window, eliminating the need for expensive fine-tuning."
+    ],
+    "follow_up_probe": "What is the KV Cache (Key-Value Cache) in transformer inference, and why does memory consumption scale linearly with sequence length during long conversational interviews?"
+  },
+  "data_pipeline_etl_streaming": {
+    "domain": "Data Architecture",
+    "keywords": ["etl", "pipeline", "streaming", "batch processing", "kafka", "spark", "latency", "throughput", "backpressure", "schema evolution"],
+    "core_question": "How do you evaluate whether to architect a data processing pipeline using Batch Processing (e.g., Apache Spark) versus Real-Time Stream Processing (e.g., Apache Kafka / Flink), and how do you handle backpressure?",
+    "evaluation_rubric": [
+      "Must contrast Batch ETL (processing large bounded datasets at scheduled intervals, optimizing for high throughput and analytical completeness) with Streaming ETL (processing unbounded data events in real time with sub-second latency, essential for fraud detection or live pricing).",
+      "Must define backpressure: when downstream consumers process data slower than upstream producers ingest it, risking memory exhaustion or message dropping.",
+      "Must explain mitigation strategies: distributed message buffering (Kafka partitions), consumer group horizontal scaling, or dynamic rate limiting / windowing."
+    ],
+    "follow_up_probe": "In an exactly-once event streaming architecture using Apache Kafka, how do idempotent producers and transactional commits prevent duplicate message processing during network retry storms?"
+  }
+}

@@ -90,8 +90,14 @@ if %errorlevel% neq 0 (
     pipwin install pyaudio
 )
 
-echo [INFO] Installing AI models and UI frameworks (faster-whisper, docling, gradio, pygame)...
-pip install faster-whisper edge-tts pygame==2.6.1 gradio numpy scikit-learn requests docling opencv-python mediapipe
+echo [INFO] Installing required project dependencies from requirements.txt...
+pip install -r requirements.txt --no-cache-dir
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install dependencies from requirements.txt.
+    echo Please check your internet connection and try running setup.bat again.
+    pause
+    exit /b 1
+)
 
 :: 5. Launch UI
 echo.
