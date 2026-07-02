@@ -29,8 +29,8 @@ class QwenInterviewer:
     ):
         from .build_system_prompt import build_interviewer_system_prompt
 
-        # Generate custom categories based on resume parsing
-        ordered_topics = decide_categories(resume_parsed, target_level)
+        # Generate custom categories based on resume parsing and target company profile
+        ordered_topics = decide_categories(resume_parsed, target_level, preferred_companies)
 
         system_prompt = build_interviewer_system_prompt(
             resume_parsed        = resume_parsed,

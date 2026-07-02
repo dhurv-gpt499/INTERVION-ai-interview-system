@@ -93,7 +93,10 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
 
     file_path = resume_file.name if hasattr(resume_file, "name") else str(resume_file)
 
-    companies = [c.strip() for c in companies_str.split(",") if c.strip()]
+    if isinstance(companies_str, list):
+        companies = [c.strip() for c in companies_str if c.strip()]
+    else:
+        companies = [c.strip() for c in str(companies_str).split(",") if c.strip()]
     roles     = [r.strip() for r in roles_str.split(",") if r.strip()]
 
     # reset shared state
@@ -184,6 +187,15 @@ def poll():
     )
 
 
+COMPANY_CHOICES = [
+    "DE Shaw", "Citadel", "Two Sigma", "Jane Street", "Jump Trading", 
+    "Tower Research Capital", "Arcesium", "Bloomberg", "WorldQuant", "Trexquant",
+    "Goldman Sachs", "Morgan Stanley", "JP Morgan Chase", "Barclays", "Visa", "Mastercard", "PayPal", "Stripe", "Square / Block", "Intuit",
+    "Google", "Meta", "Apple", "Amazon", "Microsoft", "Netflix", "NVIDIA", "Adobe", "Salesforce", "Uber",
+    "Oracle", "Cloudflare", "Cisco Systems", "Palo Alto Networks", "Datadog", "Snowflake", "MongoDB", "VMware", "Red Hat", "Akamai Technologies",
+    "Flipkart", "Zomato", "Swiggy", "Razorpay", "Atlassian", "LinkedIn", "Airbnb", "Expedia", "McKinsey / Tech Consulting", "Boston Consulting Group (BCG)"
+]
+
 # ── Gradio UI ─────────────────────────────────────────────────────────
 with gr.Blocks(title="INTERVION") as app:
 
@@ -197,7 +209,12 @@ with gr.Blocks(title="INTERVION") as app:
             with gr.Column():
                 resume_file  = gr.File(label="Upload Resume (PDF)", type="filepath")
             with gr.Column():
-                companies    = gr.Textbox(label="Target Companies",  placeholder="Google, Microsoft, Amazon")
+                companies    = gr.Dropdown(
+                                choices=COMPANY_CHOICES,
+                                value=["DE Shaw", "Google"],
+                                multiselect=True,
+                                label="Target Companies (Select one or multiple)"
+                               )
                 roles        = gr.Textbox(label="Target Roles",      placeholder="ML Engineer, Backend Engineer")
                 level        = gr.Dropdown(
                                 choices=["intern", "entry", "mid", "senior"],
