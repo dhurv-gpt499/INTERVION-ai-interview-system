@@ -12,7 +12,7 @@ def check_system():
     # Python
     py_ver = sys.version_info
     stats["python"] = f"{py_ver.major}.{py_ver.minor}.{py_ver.micro}"
-    stats["python_ok"] = py_ver.major == 3 and py_ver.minor in (10, 11, 12)
+    stats["python_ok"] = py_ver.major == 3 and py_ver.minor in (11, 12)
     
     # GPU / CUDA check via nvidia-smi
     gpu_name = "Not Detected (CPU Fallback)"
@@ -90,7 +90,7 @@ def run_gui(stats):
     
     items = [
         ("Operating System", "Windows 10/11 64-bit", stats["os"], True),
-        ("Python Version", "3.10 - 3.12", f"Python {stats['python']}", stats["python_ok"]),
+        ("Python Version", "3.11 or 3.12", f"Python {stats['python']}", stats["python_ok"]),
         ("NVIDIA GPU (CUDA)", "Recommended for PyTorch 2.4+", stats["gpu"], stats["gpu_ok"]),
         ("Ollama LLM Engine", "Required for Qwen 2.5", stats["ollama"], stats["ollama_ok"]),
         ("Storage / RAM", "15 GB Free / 16 GB RAM", "Checking available disk space... OK", True)

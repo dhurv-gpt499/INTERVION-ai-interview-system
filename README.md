@@ -89,13 +89,13 @@ Everything runs **locally on your machine** — no cloud APIs, no data leaving y
 | Layer | Technology | Purpose |
 |---|---|---|
 | **STT** | faster-whisper (small) | Real-time speech to text |
-| **VAD** | Silero VAD | Voice activity + pause detection |
-| **LLM** | Qwen 2.5 7B Q4 via Ollama | Interview intelligence |
-| **TTS** | Edge-TTS | Natural streaming voice output |
-| **Vision** | OpenCV + MediaPipe | Webcam + face analysis |
-| **RAG** | LangChain + FAISS | Resume-aware context retrieval |
-| **DB** | SQLite | Session + progress storage |
-| **Audio** | PyAudio + pygame | Mic capture + audio playback |
+| **VAD** | Silero VAD | Voice activity + pause detection (tensor-gated) |
+| **LLM** | Qwen 2.5 7B via Ollama | Technical interview intelligence & reasoning |
+| **TTS** | Edge-TTS | Natural streaming voice output (on_audio_start sync) |
+| **Vision** | OpenCV + MediaPipe | Webcam facial landmarks + emotion metrics |
+| **RAG** | Scikit-Learn TF-IDF | Zero-VRAM keyword & concept context retrieval |
+| **DB** | SQLite | Session analytics + cross-interview progress |
+| **Audio** | PyAudio + pygame | Mic capture + low-latency audio playback |
 
 **VRAM Budget (RTX 3050 6GB)**
 ```
@@ -115,61 +115,64 @@ INTERVION/
 ├── audio_processor/
 │   ├── model_loader.py            # load Whisper + Silero VAD
 │   ├── mic_capture.py             # microphone → audio frames
-│   ├── vad.py                     # voice activity detection
-│   ├── transcriber.py             # audio → text (Hinglish)
-│   ├── tts_engine.py              # streaming text → speech
+│   ├── vad.py                     # voice activity detection with debounce gating
+│   ├── transcriber.py             # audio → text (Hinglish support)
+│   ├── tts_engine.py              # streaming text → speech with instant stop
 │   ├── interview_state_machine.py # thread-safe state management
-│   └── pipeline.py                # main audio loop
+│   └── pipeline.py                # main audio loop & thread worker orchestration
 │
-├── llm_engine/
-│   ├── qwen_interviewer.py        # Qwen streaming interview logic
-│   ├── question_generator.py      # resume-aware question generation
-│   └── answer_evaluator.py        # answer scoring + feedback
+├── llm_interviewer/
+│   ├── interviewer.py             # Qwen streaming interview logic
+│   ├── question_generator.py      # resume-aware topic weighting
+│   ├── rag_engine.py              # zero-VRAM Scikit-Learn TF-IDF indexing
+│   └── build_system_prompt.py     # dynamic system prompt construction
 │
-├── vision/
-│   ├── webcam_capture.py          # OpenCV frame capture
-│   ├── face_analyzer.py           # MediaPipe landmarks
-│   └── anxiety_detector.py        # anxiety + confidence scoring
+├── vision_processor/
+│   ├── camera.py                  # OpenCV video capture thread
+│   └── anxiety_detector.py        # MediaPipe facial landmarks & confidence metrics
 │
 ├── resume_parser/
-│   └── resume_parser.py           # PDF → structured data via Qwen
+│   └── resume_parser.py           # PDF → markdown/structured extraction via Docling
 │
 ├── database/
-│   └── database.py                # SQLite session + history storage
+│   └── database.py                # SQLite session tracking & Q&A history
 │
-├── utils/
-│   └── cp_stats.py                # competitive programming stats
+├── ui/
+│   ├── app.py                     # Gradio real-time UI & 10 FPS sprite avatar
+│   └── assets/                    # avatar state sprites (idle, listening, talking)
 │
-├── install.py                     # one-click auto installer
-├── run_model.py                   # launch the app
-└── requirements.txt               # all dependencies
+├── setup.py                       # interactive Tkinter requirements GUI & launcher
+└── setup.bat                      # automated Windows environment & PyTorch installer
 ```
 
 ---
 
 ## Installation
 
-> **Only requirement: Python 3.11** — everything else installs automatically.
+> **Strict Requirement: Python 3.11 or Python 3.12** — everything else installs automatically.
 
-```bash
-# 1. Clone the repo
+```cmd
+:: 1. Clone the repository
 git clone https://github.com/yourusername/INTERVION.git
 cd INTERVION
 
-# 2. Run the auto-installer (does everything below automatically)
-python install.py
+:: 2. Run the automated setup checklist and installer
+python setup.py
 ```
 
-**What `install.py` does automatically:**
-- ✅ Creates Python virtual environment
-- ✅ Downloads and installs Ollama silently
-- ✅ Pulls Qwen 2.5 7B model (~4GB, one time only)
-- ✅ Installs all pip dependencies (PyTorch CUDA, Whisper, etc.)
-- ✅ Initializes the database
+**What `setup.py` / `setup.bat` does automatically:**
+- ✅ Verifies compatible Python version (Strictly 3.11 or 3.12)
+- ✅ Checks GPU CUDA status and Ollama service connection
+- ✅ Pulls Qwen 2.5 LLM model (`qwen2.5:latest`)
+- ✅ Configures isolated Python virtual environment (`interview_ai`)
+- ✅ Safely installs PyTorch 2.4+ with CUDA 12.4 support (`--index-url https://download.pytorch.org/whl/cu124`)
+- ✅ Installs all audio, vision, STT, and UI packages without dependency conflicts
+- ✅ Automatically launches the INTERVION interface (`python ui/app.py`)
 
-```bash
-# 3. Start the app
-python run_model.py
+To manually launch the application after setup:
+```cmd
+call interview_ai\Scripts\activate.bat
+python ui\app.py
 ```
 
 ---
@@ -204,27 +207,26 @@ python run_model.py
 
 ## Roadmap
 
-- [x] Resume parsing with Qwen
-- [x] Real-time STT pipeline (Whisper + Silero VAD)
-- [x] Streaming TTS engine (Edge-TTS)
-- [x] Interview state machine
-- [x] LLM interview engine (Qwen 2.5 streaming)
-- [ ] RAG pipeline for resume-aware questioning
-- [ ] Webcam + anxiety detection (MediaPipe)
-- [ ] Full threading (5 concurrent threads)
-- [ ] Post-interview feedback dashboard
-- [ ] 2D avatar for AI interviewer
-- [ ] Web frontend
-- [ ] Database + cross-session progress tracking
+- [x] Resume parsing with Docling & structured JSON
+- [x] Real-time STT pipeline (faster-whisper + Silero VAD tensor debouncing)
+- [x] Streaming TTS engine with instant thread-safe interruption (Edge-TTS)
+- [x] Centralized deterministic interview state machine
+- [x] LLM interview intelligence engine (Qwen 2.5 streaming)
+- [x] Zero-VRAM concept RAG pipeline (Scikit-Learn TF-IDF)
+- [x] Real-time webcam anxiety & confidence detection (MediaPipe FaceMesh)
+- [x] Multi-threaded concurrency architecture (5 synchronized async threads)
+- [x] Real-time UI dashboard with 10 FPS state-driven avatar sprites
+- [x] SQLite database session analytics & Q&A history tracking
+- [x] Automated Windows installer (`setup.bat` & `setup.py` with GPU/CUDA verification)
 
 ---
 
 ## Requirements
 
-- **Python 3.11** — [download here](https://www.python.org/downloads/release/python-3110/)
-- **NVIDIA GPU with 6GB+ VRAM** (CUDA 12.1 compatible)
+- **Python 3.11 or Python 3.12** (Strictly enforced for wheel & CUDA compatibility)
+- **NVIDIA GPU with 6GB+ VRAM** (Recommended for PyTorch 2.4+ and faster-whisper CUDA)
 - Microphone + webcam
-- Internet connection (first run only — for model downloads)
+- Internet connection (first run only — for model download and PyTorch wheels)
 
 ---
 
