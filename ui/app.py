@@ -40,7 +40,7 @@ AVATAR_RATES = {
 
 # ── Shared state (pipeline writes, UI reads) ──────────────────────────
 shared = {
-    "screen"      : "setup", # "setup", "loading", "interview"
+    "screen"      : "setup", # "setup", "loading", "interview", "report"
     "transcript"  : "",
     "state"       : "Waiting to start...",
     "avatar"      : "idle",
@@ -50,6 +50,7 @@ shared = {
     "qa_history"  : [],
     "running"     : False,
     "frame_tick"  : 0,   # increments every poll tick for animation
+    "report_card" : {},  # stores final evaluation JSON
 }
 
 pipeline_thread = None
@@ -118,6 +119,7 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
 
 
 def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
+    resume_parsed = {}
     try:
         # Move heavy parsing to background thread so UI doesn't block!
         resume_parsed, _ = parse_resume(resume_file_path)
@@ -138,28 +140,57 @@ def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
         )
     finally:
         shared["running"] = False
-        shared["state"]   = "Interview complete."
+        shared["state"]   = "Generating Report Card..."
         shared["avatar"]  = "idle"
-        shared["screen"]  = "setup"
+        
+        try:
+            from llm_interviewer.answer_evaluator import AnswerEvaluator
+            from database.database import save_interview_report
+            import uuid
+
+            evaluator = AnswerEvaluator()
+            report = evaluator.evaluate_final_interview(
+                qa_history          = shared["qa_history"],
+                resume_parsed       = resume_parsed if isinstance(resume_parsed, dict) else {},
+                preferred_companies = companies,
+                target_level        = level,
+                avg_anxiety         = shared["anxiety"],
+                avg_confidence      = shared["confidence"]
+            )
+            shared["report_card"] = report
+            
+            session_id = str(uuid.uuid4())[:8]
+            save_interview_report(
+                session_id       = session_id,
+                candidate_name   = resume_parsed.get("name", "Candidate") if isinstance(resume_parsed, dict) else "Candidate",
+                target_companies = companies,
+                target_roles     = roles,
+                target_level     = level,
+                overall_score    = report.get("overall_score", 70),
+                verdict          = report.get("verdict", "Complete"),
+                report_json      = report
+            )
+        except Exception as e:
+            print(f"[REPORT ERROR] {e}")
+            shared["report_card"] = {}
+
+        shared["screen"] = "report"
 
 
 def stop_interview():
     shared["running"] = False
     tts_engine.stop()          # ← kill audio immediately, flush queues
-    shared["state"]   = "Stopped."
-    shared["avatar"]  = "idle"
-    shared["screen"]  = "setup"
+    shared["state"]   = "Interview ended. Generating Report Card..."
     return "Stopped."
 
 
 # ── Polling — updates UI every 0.1s ────────────────────────────────────
 def poll():
-    # Screen visibility — no loading screen, go straight to interview
     show_setup     = gr.update(visible=(shared["screen"] == "setup"))
-    show_loading   = gr.update(visible=False)  # loading screen removed
+    show_loading   = gr.update(visible=False)
     show_interview = gr.update(visible=(shared["screen"] == "interview"))
+    show_report    = gr.update(visible=(shared["screen"] == "report"))
 
-    # ── Avatar frame cycling ──────────────────────────────────────────
     state    = shared["avatar"]
     frames   = AVATAR_FRAMES.get(state, AVATAR_FRAMES["idle"])
     rate     = AVATAR_RATES.get(state, 30)
@@ -173,10 +204,22 @@ def poll():
         for i, qa in enumerate(shared["qa_history"])
     ) or "No answers yet."
 
+    rc = shared.get("report_card", {})
+    score_str      = f"{rc.get('overall_score', 0)} / 100" if rc else "Pending..."
+    verdict_str    = str(rc.get("verdict", "N/A")) if rc else "Pending..."
+    summary_str    = str(rc.get("summary", "No evaluation generated yet.")) if rc else ""
+    strengths_str  = "\n".join(f"• {s}" for s in rc.get("strengths", [])) if rc and rc.get("strengths") else "None recorded."
+    weaknesses_str = "\n".join(f"• {w}" for w in rc.get("weaknesses", [])) if rc and rc.get("weaknesses") else "None recorded."
+    
+    topics_dict    = rc.get("topic_scores", {}) if rc else {}
+    topics_str     = "\n".join(f"• {k}: {v}/100" for k, v in topics_dict.items()) if isinstance(topics_dict, dict) else str(topics_dict)
+    rec_str        = str(rc.get("key_recommendation", "Continue practicing technical fundamentals.")) if rc else ""
+
     return (
         show_setup,
         show_loading,
         show_interview,
+        show_report,
         avatar_img,
         shared["state"],
         shared["transcript"].strip(),
@@ -184,6 +227,13 @@ def poll():
         shared["confidence"],
         shared["webcam"],
         history_md,
+        score_str,
+        verdict_str,
+        summary_str,
+        strengths_str,
+        weaknesses_str,
+        topics_str,
+        rec_str,
     )
 
 
@@ -271,13 +321,41 @@ with gr.Blocks(title="INTERVION") as app:
         with gr.Accordion("📋 Q&A History", open=False):
             history_md = gr.Markdown("No answers yet.")
 
+    # ── SCREEN 4: REPORT CARD ─────────────────────────────────────
+    with gr.Column(visible=False) as report_screen:
+        gr.Markdown("<br><h2 style='text-align: center;'>🏆 Final Evaluation & Report Card</h2>")
+        gr.Markdown("<p style='text-align: center;'><i>AI Hiring Committee Assessment Grounded in Two-Engine RAG & Vision Analytics</i></p>")
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                score_box   = gr.Textbox(label="Overall Score", value="0 / 100", interactive=False)
+                verdict_box = gr.Textbox(label="Hiring Verdict", value="Pending...", interactive=False)
+            with gr.Column(scale=2):
+                summary_box = gr.Textbox(label="Executive Summary", lines=4, interactive=False)
+        
+        with gr.Row():
+            with gr.Column():
+                strengths_box  = gr.Textbox(label="💪 Demonstrated Strengths", lines=5, interactive=False)
+            with gr.Column():
+                weaknesses_box = gr.Textbox(label="⚠️ Areas for Improvement", lines=5, interactive=False)
+
+        with gr.Row():
+            with gr.Column(scale=1):
+                topic_scores_box   = gr.Textbox(label="📊 Competency Topic Breakdown", lines=4, interactive=False)
+            with gr.Column(scale=1):
+                recommendation_box = gr.Textbox(label="🎯 Key Recommendation for Next Round", lines=4, interactive=False)
+        
+        with gr.Row():
+            restart_btn = gr.Button("🔄 Start New Interview", variant="primary", size="lg")
+
     # ── Timer — polls shared state every second ────────────────────────
     timer = gr.Timer(value=0.1)  # 10 FPS for smooth avatar animation
     timer.tick(
         fn      = poll,
-        outputs = [setup_screen, loading_screen, interview_screen,
+        outputs = [setup_screen, loading_screen, interview_screen, report_screen,
                    avatar_img, state_box, transcript_box,
-                   anxiety_slider, confidence_slider, webcam_img, history_md],
+                   anxiety_slider, confidence_slider, webcam_img, history_md,
+                   score_box, verdict_box, summary_box, strengths_box, weaknesses_box, topic_scores_box, recommendation_box],
     )
 
     # ── Button events ──────────────────────────────────────────────────
@@ -292,6 +370,20 @@ with gr.Blocks(title="INTERVION") as app:
         outputs = [status_box],
     )
 
+    def restart_to_setup():
+        shared["screen"]      = "setup"
+        shared["report_card"] = {}
+        shared["qa_history"]  = []
+        shared["transcript"]  = ""
+        shared["state"]       = "Ready"
+        return "Ready"
+
+    restart_btn.click(
+        fn      = restart_to_setup,
+        outputs = [status_box],
+    )
+
 
 if __name__ == "__main__":
     app.launch(share=False)
+

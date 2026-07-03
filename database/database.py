@@ -55,12 +55,76 @@ def init_db():
         session_data  TEXT,
         FOREIGN KEY (resume_email) REFERENCES resumes(email)
     );
+
+    CREATE TABLE IF NOT EXISTS interview_reports (
+        session_id       TEXT PRIMARY KEY,
+        candidate_name   TEXT,
+        target_companies TEXT,
+        target_roles     TEXT,
+        target_level     TEXT,
+        overall_score    REAL,
+        verdict          TEXT,
+        report_json      TEXT,
+        created_at       TEXT
+    );
     """)
     
     conn.commit()
     conn.close()
     print("Database initialized successfully!")
     
+
+def save_interview_report(
+    session_id: str,
+    candidate_name: str,
+    target_companies: list,
+    target_roles: list,
+    target_level: str,
+    overall_score: float,
+    verdict: str,
+    report_json: dict
+) -> bool:
+    """Save the final evaluated interview report card to database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS interview_reports (
+                session_id       TEXT PRIMARY KEY,
+                candidate_name   TEXT,
+                target_companies TEXT,
+                target_roles     TEXT,
+                target_level     TEXT,
+                overall_score    REAL,
+                verdict          TEXT,
+                report_json      TEXT,
+                created_at       TEXT
+            );
+        """)
+        cursor.execute("""
+            INSERT OR REPLACE INTO interview_reports
+            (session_id, candidate_name, target_companies, target_roles, target_level, overall_score, verdict, report_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            session_id,
+            candidate_name or "Anonymous Candidate",
+            ", ".join(target_companies) if isinstance(target_companies, list) else str(target_companies),
+            ", ".join(target_roles) if isinstance(target_roles, list) else str(target_roles),
+            target_level,
+            float(overall_score),
+            verdict,
+            json.dumps(report_json),
+            datetime.now().isoformat()
+        ))
+        conn.commit()
+        print(f"[DATABASE] Saved interview report card for session {session_id}")
+        return True
+    except Exception as e:
+        print(f"[DATABASE ERROR] Failed to save interview report card: {e}")
+        return False
+    finally:
+        conn.close()
+
 
 def save_name(name: str, email: str) -> bool:
     """Save name as soon as user types it in Streamlit — before parsing."""
