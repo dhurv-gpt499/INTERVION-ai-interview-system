@@ -19,6 +19,7 @@ def run_pipeline(
     target_level        : str  = "entry",
     domain              : str  = "software engineering",
     duration_minutes    : int  = 20,
+    focus_weaknesses    : bool = True,
     # UI callbacks
     on_state_change     = None,
     on_transcript       = None,
@@ -165,6 +166,22 @@ def run_pipeline(
 
     # Avatar switches to talking at the exact moment pygame starts playing
     # on_audio_start fires inside the player thread when play() is called
+    past_weak_areas = []
+    if focus_weaknesses:
+        try:
+            from database.database import get_latest_interview_report
+            candidate_name = resume_parsed.get("name", "") if isinstance(resume_parsed, dict) else ""
+            if candidate_name:
+                latest_report = get_latest_interview_report(candidate_name)
+                if latest_report and isinstance(latest_report, dict):
+                    past_weak_areas = latest_report.get("weaknesses", [])
+                    if past_weak_areas:
+                        print(f"[MEMORY] Found past weaknesses for {candidate_name}: {past_weak_areas}")
+        except Exception as e:
+            print(f"[MEMORY ERROR] {e}")
+    else:
+        print("[MEMORY] Focus on past weaknesses disabled by user toggle. Starting fresh session.")
+
     init_gen = interviewer.start(
         resume_parsed       = resume_parsed,
         preferred_companies = preferred_companies,
@@ -172,6 +189,7 @@ def run_pipeline(
         target_level        = target_level,
         domain              = domain,
         duration_minutes    = duration_minutes,
+        past_weak_areas     = past_weak_areas,
     )
     tts_engine.stream_from_llm(
         init_gen,

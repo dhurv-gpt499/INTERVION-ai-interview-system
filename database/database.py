@@ -126,6 +126,26 @@ def save_interview_report(
         conn.close()
 
 
+def get_latest_interview_report(candidate_name: str) -> dict:
+    """Fetch the candidate's most recent interview report card from database to check past weaknesses."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT report_json FROM interview_reports 
+            WHERE candidate_name = ? 
+            ORDER BY created_at DESC LIMIT 1
+        """, (candidate_name,))
+        row = cursor.fetchone()
+        if row and row["report_json"]:
+            return json.loads(row["report_json"])
+    except Exception as e:
+        print(f"[DATABASE ERROR] Failed to fetch latest report: {e}")
+    finally:
+        conn.close()
+    return None
+
+
 def save_name(name: str, email: str) -> bool:
     """Save name as soon as user types it in Streamlit — before parsing."""
     conn = get_connection()
@@ -239,9 +259,19 @@ def save_parsed_sections(email: str, parsed_data: dict) -> bool:
     except Exception as e:
         print(f"Error saving parsed sections: {e}")
         return False
-    
     finally:
         conn.close()
+
+
+def get_resume(email: str) -> dict:
+    """Fetch basic candidate identity from resumes table."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM resumes WHERE email = ?", (email,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 
 def get_parsed_resume(email: str) -> dict:
     """Fetch parsed resume sections for use during interview."""

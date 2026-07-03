@@ -83,7 +83,7 @@ def on_vision_frame(frame):
 
 
 # ── Start interview ────────────────────────────────────────────────────
-def start_interview(resume_file, companies_str, roles_str, level, duration):
+def start_interview(resume_file, companies_str, roles_str, level, duration, focus_weak=True):
     global pipeline_thread
 
     if shared["running"]:
@@ -111,14 +111,14 @@ def start_interview(resume_file, companies_str, roles_str, level, duration):
     # run pipeline in background thread
     pipeline_thread = threading.Thread(
         target      = _run_pipeline_thread,
-        args        = (file_path, companies, roles, level, int(duration)),
+        args        = (file_path, companies, roles, level, int(duration), bool(focus_weak)),
         daemon      = True,
     )
     pipeline_thread.start()
     return "Starting..."
 
 
-def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
+def _run_pipeline_thread(resume_file_path, companies, roles, level, duration, focus_weak=True):
     resume_parsed = {}
     try:
         # Move heavy parsing to background thread so UI doesn't block!
@@ -131,6 +131,7 @@ def _run_pipeline_thread(resume_file_path, companies, roles, level, duration):
             preferred_roles     = roles,
             target_level        = level,
             duration_minutes    = duration,
+            focus_weaknesses    = focus_weak,
             on_state_change     = on_state_change,
             on_transcript       = on_transcript_update,
             on_qa_complete      = on_qa_complete,
@@ -272,6 +273,7 @@ with gr.Blocks(title="INTERVION") as app:
                                 label="Experience Level"
                                )
                 duration     = gr.Slider(10, 60, value=20, step=5, label="Duration (minutes)")
+                focus_weak   = gr.Checkbox(value=True, label="🎯 Focus on previous weak areas (from past session reports)")
 
         with gr.Row():
             start_btn = gr.Button("🚀 Start Interview", variant="primary", size="lg")
@@ -361,7 +363,7 @@ with gr.Blocks(title="INTERVION") as app:
     # ── Button events ──────────────────────────────────────────────────
     start_btn.click(
         fn      = start_interview,
-        inputs  = [resume_file, companies, roles, level, duration],
+        inputs  = [resume_file, companies, roles, level, duration, focus_weak],
         outputs = [status_box], # Hidden box just to consume string output
     )
 
