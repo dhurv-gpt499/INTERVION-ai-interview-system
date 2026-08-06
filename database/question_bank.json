@@ -1,0 +1,70 @@
+{
+  "dsa": [
+    {
+      "title": "Two Sum (O(N) Optimization)",
+      "problem_statement": "Given an array of integers and an integer target, return the indices of the two numbers such that they add up to the target. You may assume exactly one solution exists, and you cannot use the same element twice.",
+      "optimal_solution_hints": "The candidate must not use an O(N^2) nested loop. They must use a Hash Map to store the complements (target - current_num) to achieve an O(N) time and O(N) space complexity."
+    },
+    {
+      "title": "LRU Cache Design",
+      "problem_statement": "Design a data structure that implements the constraints of a Least Recently Used (LRU) cache. It must support get(key) and put(key, value) operations in O(1) average time complexity.",
+      "optimal_solution_hints": "The candidate must combine a Hash Map (for O(1) lookups) with a Doubly Linked List (for O(1) evictions and moving nodes to the front). A singly linked list or array is incorrect."
+    },
+    {
+      "title": "Merge Intervals",
+      "problem_statement": "Given an array of intervals where intervals[i] = [start_i, end_i], merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.",
+      "optimal_solution_hints": "The candidate must first sort the intervals by their start times (O(N log N) time complexity). Then iterate through and merge them into a new array (O(N) space)."
+    },
+    {
+      "title": "Word Ladder (Shortest Path)",
+      "problem_statement": "Given two words (beginWord and endWord) and a dictionary's word list, find the length of the shortest transformation sequence from beginWord to endWord, such that only one letter can be changed at a time and each transformed word must exist in the word list.",
+      "optimal_solution_hints": "The candidate must recognize this as an unweighted shortest path graph problem and use Breadth-First Search (BFS) using a Queue. Time complexity should be O(M^2 * N) where M is word length and N is word list size."
+    }
+  ],
+  "system_design": [
+    {
+      "title": "Design a URL Shortener",
+      "problem_statement": "Design a highly scalable URL shortening service like bit.ly. It needs to handle 100 million new URLs per month and 1 billion redirects per month.",
+      "optimal_solution_hints": "The candidate should calculate capacity (reads heavily outnumber writes). They must mention base62 encoding for the hashes, a distributed NoSQL or RDBMS database for storage, and an aggressive caching layer (Redis/Memcached) for redirects."
+    },
+    {
+      "title": "Design a Global Rate Limiter",
+      "problem_statement": "Design a distributed rate limiter that restricts API requests per user to 100 requests per minute across a fleet of microservices globally.",
+      "optimal_solution_hints": "The candidate must choose a suitable algorithm (Token Bucket, Leaky Bucket, or Sliding Window). They must discuss storing counters in a centralized fast store like Redis, and how to handle race conditions (using Lua scripts or Redis INCR)."
+    },
+    {
+      "title": "Design a Chat Application",
+      "problem_statement": "Design a real-time chat application like WhatsApp or Discord that supports 1-on-1 messaging and group chats for 50 million daily active users.",
+      "optimal_solution_hints": "The candidate must mention WebSockets for real-time bidirectional communication, a message broker (Kafka/RabbitMQ) for fan-out, and a fast key-value store (Cassandra or DynamoDB) for massive write throughput."
+    }
+  ],
+  "quant_brainteasers": [
+    {
+      "title": "The 25 Horses Puzzle",
+      "problem_statement": "You have 25 horses and a race track that can accommodate 5 horses at a time. You do not have a stopwatch. What is the minimum number of races required to find the 3 fastest horses?",
+      "optimal_solution_hints": "The answer is 7 races. Divide into 5 groups of 5 (5 races). Race the winners of each group (1 race). Based on the results, identify the remaining candidates for 2nd and 3rd place, and race those 5 horses (1 race)."
+    },
+    {
+      "title": "Expected Coin Tosses",
+      "problem_statement": "What is the expected number of fair coin tosses required to get two consecutive Heads (HH)?",
+      "optimal_solution_hints": "The candidate should set up algebraic expectations. E = (1/2)*(E+1) [if Tails] + (1/4)*(E+2) [if HT] + (1/4)*2 [if HH]. Solving this yields E = 6 tosses."
+    },
+    {
+      "title": "Monty Hall Problem",
+      "problem_statement": "You are on a game show. There are 3 doors. Behind one is a car; behind the others, goats. You pick Door 1. The host, who knows what's behind the doors, opens Door 3, which has a goat. He asks if you want to switch to Door 2. Is it to your advantage to switch?",
+      "optimal_solution_hints": "The candidate must definitively answer YES. Staying gives a 1/3 chance of winning. Switching gives a 2/3 chance. The host's action provides new information."
+    }
+  ],
+  "core_cs": [
+    {
+      "title": "Mutex vs Semaphore implementation",
+      "problem_statement": "Explain the difference between a Mutex and a Semaphore. Then, describe how you would implement a Thread-Safe Producer-Consumer queue using these synchronization primitives.",
+      "optimal_solution_hints": "Mutex = ownership-based lock for 1 thread. Semaphore = signaling counter. For the queue, use a Mutex to protect the buffer, a 'full' semaphore (counts items), and an 'empty' semaphore (counts empty slots)."
+    },
+    {
+      "title": "Database Indexing Under the Hood",
+      "problem_statement": "Explain exactly how a B+ Tree index accelerates a database query. What happens to the B+ Tree when a massive batch of INSERTs occurs, and why is this problematic?",
+      "optimal_solution_hints": "B+ Trees keep data in leaf nodes and keys in internal nodes, allowing O(log N) lookups. Massive inserts cause page splits and rebalancing, leading to heavy disk I/O and index fragmentation."
+    }
+  ]
+}

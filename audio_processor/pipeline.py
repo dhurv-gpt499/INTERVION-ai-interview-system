@@ -20,6 +20,7 @@ def run_pipeline(
     domain              : str  = "software engineering",
     duration_minutes    : int  = 20,
     focus_weaknesses    : bool = True,
+    mic_device_index    : int  = None,
     # UI callbacks
     on_state_change     = None,
     on_transcript       = None,
@@ -217,7 +218,7 @@ def run_pipeline(
             llm_queue.put(("no_answer", ""))
 
     segmenter = SpeechSegmenter(speech_queue, on_event=on_event)
-    mic       = AudioCapture(chunk_size=512)
+    mic       = AudioCapture(device_index=mic_device_index, chunk_size=512)
     cam       = VideoCaptureThread(
         on_frame  = on_vision_frame,
         on_scores = handle_vision_scores

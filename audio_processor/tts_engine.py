@@ -124,7 +124,7 @@ def stream_from_llm(token_generator, state_machine=None, on_sentence=None, on_au
             if sentence:
                 import re
                 clean_sent = re.sub(r'[*#_]', '', sentence).strip()
-                if clean_sent:
+                if clean_sent and re.search(r'[a-zA-Z0-9]', clean_sent):
                     print(f"[TTS] -> {clean_sent}")
                     if on_sentence:
                         on_sentence(clean_sent)
@@ -134,7 +134,7 @@ def stream_from_llm(token_generator, state_machine=None, on_sentence=None, on_au
         sent = sentence_buffer.strip()
         import re
         clean_sent = re.sub(r'[*#_]', '', sent).strip()
-        if clean_sent:
+        if clean_sent and re.search(r'[a-zA-Z0-9]', clean_sent):
             if on_sentence:
                 on_sentence(clean_sent)
             _text_queue.put(clean_sent)

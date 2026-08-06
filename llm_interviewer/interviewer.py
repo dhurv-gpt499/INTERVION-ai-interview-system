@@ -93,7 +93,7 @@ class QwenInterviewer:
                 ephemeral_hint = f"[SYSTEM INJECTION - KNOWLEDGE GRAPH & RUBRICS]: Use the following verified details and grading standard to ground your evaluation and formulate your next probing question:\n{rag_context}"
 
         self.turn_count += 1
-        return self._stream_response(ephemeral_hint=ephemeral_hint, add_filler=True)
+        return self._stream_response(ephemeral_hint=ephemeral_hint)
 
 
     def send_timesup(self):
@@ -104,15 +104,10 @@ class QwenInterviewer:
         return self._stream_response()
 
 
-    def _stream_response(self, ephemeral_hint: str = "", add_filler: bool = False):
+    def _stream_response(self, ephemeral_hint: str = ""):
         messages_payload = list(self.messages)
         if ephemeral_hint:
             messages_payload.append({"role": "system", "content": ephemeral_hint})
-
-        if add_filler:
-            import random
-            fillers = ["Hmm... ", "Right. ", "Okay. ", "I see. ", "Interesting... "]
-            yield random.choice(fillers)
 
         payload = {
             "model"   : MODEL_NAME,

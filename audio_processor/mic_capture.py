@@ -7,18 +7,42 @@ import numpy as np
 class AudioCapture:
     def __init__(
         self,
+        device_index=None,
         sample_rate=16000,
         chunk_size=1600,
         channels=1,
     ):
+        self.device_index = device_index
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
         self.channels = channels
 
-        self.audio_queue = queue.Queue(maxsize=50)  # ← fix 1: size limit
+        self.audio_queue = queue.Queue(maxsize=50)
         self.running = False
         self.p = pyaudio.PyAudio()
-        self.stream = None  # ← stream starts as None
+        self.stream = None
+
+    @staticmethod
+    def get_devices():
+        p = pyaudio.PyAudio()
+        devices = []
+        default_index = -1
+        try:
+            default_device = p.get_default_input_device_info()
+            default_index = default_device['index']
+        except IOError:
+            pass
+
+        for i in range(p.get_device_count()):
+            info = p.get_device_info_by_index(i)
+            if info.get('maxInputChannels') > 0:
+                devices.append({
+                    "index": i,
+                    "name": info.get('name'),
+                    "is_default": i == default_index
+                })
+        p.terminate()
+        return devices
 
     def bytes_to_float32(self, audio_bytes):
         return (
@@ -36,20 +60,20 @@ class AudioCapture:
             audio_np = self.bytes_to_float32(chunk)
 
             try:
-                self.audio_queue.put_nowait(audio_np)  # ← fix 2: non-blocking
+                self.audio_queue.put_nowait(audio_np)
             except queue.Full:
-                pass  # drop frame if queue full, keep moving
+                pass
 
     def start(self):
         if self.running:
             return
 
-        # ← fix 1: stream opens HERE not in __init__
         self.stream = self.p.open(
             format=pyaudio.paInt16,
             channels=self.channels,
             rate=self.sample_rate,
             input=True,
+            input_device_index=self.device_index,
             frames_per_buffer=self.chunk_size,
         )
 
@@ -74,19 +98,3 @@ class AudioCapture:
 
     def get_chunk(self):
         return self.audio_queue.get()
-
-
-if __name__ == "__main__":
-    audio = AudioCapture()
-    audio.start()
-
-    try:
-        while True:
-            chunk = audio.get_chunk()
-            print(
-                f"Shape={chunk.shape} "
-                f"Min={chunk.min():.3f} "
-                f"Max={chunk.max():.3f}"
-            )
-    except KeyboardInterrupt:
-        audio.stop()

@@ -6,10 +6,10 @@ class SpeechSegmenter:
         self,
         speech_queue,
         on_event,
-        silence_frames_threshold = 156,   # 5s  — post speech silence before finalizing (allows candidates to think)
+        silence_frames_threshold = 60,    # 2s  — post speech silence before finalizing (fast response)
         no_answer_threshold      = 469,   # 15s — before first word (comfortable thinking time)
         max_speech_frames        = 250,   # 8s  — force chunk
-        vad_threshold            = 0.5,
+        vad_threshold            = 0.3,   # Lowered from 0.5 to catch quieter mics
     ):
         self.speech_queue             = speech_queue
         self.on_event                 = on_event
@@ -24,7 +24,6 @@ class SpeechSegmenter:
         self.speech_frames            = 0
         self.answer_started           = False
         self.no_answer_frames         = 0
-        self.consecutive_speech       = 0    # ← NEW: debounce noise
 
     def process_frame(self, frame, speech_probability):
         is_speech = speech_probability > self.vad_threshold
@@ -34,18 +33,14 @@ class SpeechSegmenter:
             self.no_answer_frames  = 0
             self.speech_buffer.append(frame)
             self.speech_frames    += 1
-            self.consecutive_speech += 1     # ← NEW: count consecutive
-
-            # only reset silence counter on SUSTAINED speech (not noise blip)
-            if self.consecutive_speech >= 3: # ← NEW: 3 frames = ~96ms
-                self.silence_frames = 0
+            
+            # Reset silence immediately on any speech frame to prevent fragmented cutoffs
+            self.silence_frames = 0
 
             if self.speech_frames >= self.max_speech_frames:
                 self._finalize("force_chunk")
 
         else:
-            self.consecutive_speech = 0      # ← NEW: reset on silence
-
             if not self.answer_started:
                 self.no_answer_frames += 1
                 if self.no_answer_frames >= self.no_answer_threshold:
@@ -79,4 +74,3 @@ class SpeechSegmenter:
         self.silence_frames     = 0
         self.answer_started     = False
         self.no_answer_frames   = 0
-        self.consecutive_speech = 0    # ← NEW
