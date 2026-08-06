@@ -15,27 +15,14 @@ from audio_processor.pipeline import run_pipeline
 from audio_processor import tts_engine
 from resume_parser.resume_parser import parse_resume
 
-# ── Avatar sprite frame sequences ──────────────────────────────────────
+# ── Avatar animated GIFs ──────────────────────────────────────
 ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 
-# Each state has a list of PNG filenames to cycle through
-AVATAR_FRAMES = {
-    # Mouth cycles fast (every tick = 10 FPS)
-    "talking"  : ["avatar_idle.png", "speak_1.png", "speak_2.png", "speak_1.png", "avatar_idle.png"],
-    # Slow blink (every 30 ticks = ~3s)
-    "idle"     : ["avatar_idle.png", "idle_1.png", "avatar_idle.png"],
-    # Attentive + occasional nod (every 20 ticks = ~2s) — using our generated male sprites only
-    "listening": ["listen_1.png", "avatar_idle.png"],
-    # Thinking look (every 15 ticks = ~1.5s)
-    "thinking" : ["avatar_idle.png", "think_0.png"],
-}
-
-# Ticks between frame advances (timer runs at 0.1s, so 10 = 1 second)
-AVATAR_RATES = {
-    "talking"  : 1,   # 10 FPS — fast mouth movement
-    "idle"     : 30,  # blink every ~3s
-    "listening": 20,  # nod every ~2s
-    "thinking" : 15,  # shift every ~1.5s
+AVATAR_GIFS = {
+    "talking"  : "talking.gif",
+    "idle"     : "idle.gif",
+    "listening": "listening.gif",
+    "thinking" : "thinking.gif",
 }
 
 # ── Shared state (pipeline writes, UI reads) ──────────────────────────
@@ -79,6 +66,12 @@ def on_vision_scores(anxiety: float, confidence: float):
     shared["confidence"] = confidence
 
 def on_vision_frame(frame):
+    try:
+        import cv2
+        # Resize to drastically reduce network payload and UI stutter
+        frame = cv2.resize(frame, (320, 240))
+    except Exception:
+        pass
     shared["webcam"] = frame
 
 
@@ -185,6 +178,9 @@ def stop_interview():
     return "Stopped."
 
 
+# ── Shared state for caching poll values to prevent UI lag ─────────────
+_last_poll = {}
+
 # ── Polling — updates UI every 0.1s ────────────────────────────────────
 def poll():
     show_setup     = gr.update(visible=(shared["screen"] == "setup"))
@@ -193,12 +189,7 @@ def poll():
     show_report    = gr.update(visible=(shared["screen"] == "report"))
 
     state    = shared["avatar"]
-    frames   = AVATAR_FRAMES.get(state, AVATAR_FRAMES["idle"])
-    rate     = AVATAR_RATES.get(state, 30)
-    tick     = shared["frame_tick"]
-    frame_idx = (tick // rate) % len(frames)
-    avatar_img = os.path.join(ASSETS, frames[frame_idx])
-    shared["frame_tick"] = tick + 1
+    avatar_img = os.path.join(ASSETS, AVATAR_GIFS.get(state, "idle.gif"))
 
     history_md = "\n\n".join(
         f"**Q{i+1}:** {qa['q']}\n\n**A:** {qa['a']}"
@@ -216,7 +207,7 @@ def poll():
     topics_str     = "\n".join(f"• {k}: {v}/100" for k, v in topics_dict.items()) if isinstance(topics_dict, dict) else str(topics_dict)
     rec_str        = str(rc.get("key_recommendation", "Continue practicing technical fundamentals.")) if rc else ""
 
-    return (
+    current_values = (
         show_setup,
         show_loading,
         show_interview,
@@ -236,6 +227,26 @@ def poll():
         topics_str,
         rec_str,
     )
+
+    returns = []
+    for i, val in enumerate(current_values):
+        # We skip updates if the value hasn't changed.
+        # For the webcam image (numpy array), we check object identity (is) 
+        # because a new array is assigned each frame.
+        if i == 9: # webcam index
+            if _last_poll.get(i) is val:
+                returns.append(gr.skip())
+            else:
+                returns.append(val)
+                _last_poll[i] = val
+        else:
+            if _last_poll.get(i) == val:
+                returns.append(gr.skip())
+            else:
+                returns.append(val)
+                _last_poll[i] = val
+
+    return tuple(returns)
 
 
 COMPANY_CHOICES = [

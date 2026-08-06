@@ -5,7 +5,7 @@ import io
 import queue
 import threading
 
-VOICE = "en-US-AndrewNeural"
+VOICE = "en-US-GuyNeural"
 pygame.mixer.init()
 
 # Queue 1: text sentences waiting to be generated
@@ -122,16 +122,22 @@ def stream_from_llm(token_generator, state_machine=None, on_sentence=None, on_au
         sentences, sentence_buffer = _extract_sentences(sentence_buffer)
         for sentence in sentences:
             if sentence:
-                print(f"[TTS] -> {sentence}")
-                if on_sentence:
-                    on_sentence(sentence)
-                _text_queue.put(sentence)
+                import re
+                clean_sent = re.sub(r'[*#_]', '', sentence).strip()
+                if clean_sent:
+                    print(f"[TTS] -> {clean_sent}")
+                    if on_sentence:
+                        on_sentence(clean_sent)
+                    _text_queue.put(clean_sent)
 
     if sentence_buffer.strip() and not _stop_event.is_set():
         sent = sentence_buffer.strip()
-        if on_sentence:
-            on_sentence(sent)
-        _text_queue.put(sent)
+        import re
+        clean_sent = re.sub(r'[*#_]', '', sent).strip()
+        if clean_sent:
+            if on_sentence:
+                on_sentence(clean_sent)
+            _text_queue.put(clean_sent)
 
     # Wait for all audio to finish playing
     _text_queue.join()
