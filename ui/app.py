@@ -9,6 +9,11 @@ import threading
 import sys
 import os
 
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from audio_processor.pipeline import run_pipeline
@@ -89,13 +94,66 @@ h1, h2, h3, h4, h5 {
     box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5) !important;
 }
 
-/* Avatar Styling */
-#avatar_col img {
-    border-radius: 20px !important;
-    box-shadow: 0 0 50px rgba(99, 102, 241, 0.4) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
-    background: #0f172a !important;
-    transition: box-shadow 0.3s ease !important;
+/* Orb Styling */
+.orb-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 350px;
+    width: 100%;
+}
+
+.orb {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #a855f7, #3b82f6);
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.6), inset 0 0 20px #3b82f6;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orb-idle {
+    animation: float 4s ease-in-out infinite;
+    opacity: 0.8;
+}
+
+.orb-listening {
+    animation: listen-pulse 1.5s infinite alternate;
+    background: radial-gradient(circle at 30% 30%, #3b82f6, #10b981);
+    box-shadow: 0 0 50px rgba(16, 185, 129, 0.6), inset 0 0 30px #10b981;
+}
+
+.orb-thinking {
+    animation: think-spin 2s linear infinite;
+    background: conic-gradient(from 0deg, #a855f7, #3b82f6, #a855f7);
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
+}
+
+.orb-talking {
+    animation: talk-pulse 0.3s infinite alternate;
+    background: radial-gradient(circle at 30% 30%, #ec4899, #8b5cf6);
+    box-shadow: 0 0 80px rgba(236, 72, 153, 0.8), inset 0 0 40px #8b5cf6;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-15px) scale(1.02); }
+    100% { transform: translateY(0px) scale(1); }
+}
+
+@keyframes listen-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); }
+    100% { transform: scale(1.15); box-shadow: 0 0 70px rgba(16, 185, 129, 0.8); }
+}
+
+@keyframes think-spin {
+    0% { transform: rotate(0deg) scale(0.95); }
+    100% { transform: rotate(360deg) scale(0.95); }
+}
+
+@keyframes talk-pulse {
+    0% { transform: scale(1.05); }
+    100% { transform: scale(1.3); box-shadow: 0 0 100px rgba(236, 72, 153, 1); }
 }
 
 /* Webcam Styling */
@@ -104,16 +162,6 @@ h1, h2, h3, h4, h5 {
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 """
-
-# ── Avatar animated GIFs ──────────────────────────────────────
-ASSETS = os.path.join(os.path.dirname(__file__), "assets")
-
-AVATAR_GIFS = {
-    "talking"  : "talking.webp",
-    "idle"     : "idle.webp",
-    "listening": "listening.webp",
-    "thinking" : "thinking.webp",
-}
 
 # ── Shared state (pipeline writes, UI reads) ──────────────────────────
 shared = {
@@ -126,7 +174,6 @@ shared = {
     "webcam"      : None,
     "qa_history"  : [],
     "running"     : False,
-    "frame_tick"  : 0,
     "report_card" : {},
 }
 
@@ -137,11 +184,16 @@ def on_state_change(state_name: str):
     shared["state"] = state_name
     if state_name in ("ai_speaking",):
         shared["avatar"] = "talking"
-        shared["frame_tick"] = 0
+        shared["screen"] = "interview"
     elif state_name in ("listening", "candidate_paused"):
         shared["avatar"] = "listening"
+        shared["screen"] = "interview"
     elif state_name in ("evaluating",):
         shared["avatar"] = "thinking"
+        shared["screen"] = "interview"
+    elif state_name in ("session_complete",):
+        shared["avatar"] = "idle"
+        shared["running"] = False
     else:
         shared["avatar"] = "idle"
 
@@ -149,7 +201,7 @@ def on_transcript_update(text: str):
     shared["transcript"] += f"\n{text}"
 
 def on_qa_complete(question: str, answer: str):
-    shared["qa_history"].append({"q": question, "a": answer})
+    shared["qa_history"] = shared["qa_history"] + [{"q": question, "a": answer}]
 
 def on_vision_scores(anxiety: float, confidence: float):
     shared["anxiety"] = anxiety
@@ -157,15 +209,15 @@ def on_vision_scores(anxiety: float, confidence: float):
 
 def on_vision_frame(frame):
     try:
-        import cv2
-        frame = cv2.resize(frame, (320, 240))
+        if cv2 is not None:
+            frame = cv2.resize(frame, (320, 240))
     except Exception:
         pass
     shared["webcam"] = frame
 
 
 # ── Start interview ────────────────────────────────────────────────────
-def start_interview(resume_file, companies_str, roles_str, level, duration, focus_weak, mic_device_str):
+def start_interview(resume_file, companies_str, roles_str, level, duration, focus_weak, mic_device_str, llm_backend, llm_api_key):
     global pipeline_thread
 
     if shared["running"]:
@@ -180,7 +232,7 @@ def start_interview(resume_file, companies_str, roles_str, level, duration, focu
         companies = [c.strip() for c in companies_str if c.strip()]
     else:
         companies = [c.strip() for c in str(companies_str).split(",") if c.strip()]
-    roles     = [r.strip() for r in roles_str.split(",") if r.strip()]
+    roles     = [r.strip() for r in str(roles_str or "").split(",") if r.strip()]
 
     # reset shared state
     shared["transcript"] = ""
@@ -188,7 +240,7 @@ def start_interview(resume_file, companies_str, roles_str, level, duration, focu
     shared["avatar"]     = "idle"
     shared["qa_history"] = []
     shared["running"]    = True
-    shared["screen"]     = "interview"
+    shared["screen"]     = "loading"
 
     mic_index = None
     if mic_device_str:
@@ -200,16 +252,17 @@ def start_interview(resume_file, companies_str, roles_str, level, duration, focu
     # run pipeline in background thread
     pipeline_thread = threading.Thread(
         target      = _run_pipeline_thread,
-        args        = (file_path, companies, roles, level, int(duration), bool(focus_weak), mic_index),
+        args        = (file_path, companies, roles, level, int(duration), bool(focus_weak), mic_index, llm_backend, llm_api_key),
         daemon      = True,
     )
     pipeline_thread.start()
     return "Starting..."
 
 
-def _run_pipeline_thread(resume_file_path, companies, roles, level, duration, focus_weak=True):
+def _run_pipeline_thread(resume_file_path, companies, roles, level, duration, focus_weak, mic_index, llm_backend, llm_api_key):
     resume_parsed = {}
     try:
+        shared["state"] = "Parsing Resume..."
         resume_parsed, _ = parse_resume(resume_file_path)
         
         shared["state"] = "Loading AI Model (takes ~10s)..."
@@ -220,6 +273,9 @@ def _run_pipeline_thread(resume_file_path, companies, roles, level, duration, fo
             target_level        = level,
             duration_minutes    = duration,
             focus_weaknesses    = focus_weak,
+            mic_device_index    = mic_index,
+            llm_backend         = llm_backend,
+            llm_api_key         = llm_api_key,
             on_state_change     = on_state_change,
             on_transcript       = on_transcript_update,
             on_qa_complete      = on_qa_complete,
@@ -227,41 +283,51 @@ def _run_pipeline_thread(resume_file_path, companies, roles, level, duration, fo
             on_vision_frame     = on_vision_frame,
             is_running          = lambda: shared["running"],
         )
+    except Exception as e:
+        print(f"[PIPELINE ERROR] {e}")
+        shared["state"] = f"Pipeline error: {e}"
     finally:
         shared["running"] = False
         shared["state"]   = "Generating Report Card..."
         shared["avatar"]  = "idle"
         
-        try:
-            from llm_interviewer.answer_evaluator import AnswerEvaluator
-            from database.database import save_interview_report
-            import uuid
+        # Only generate report if we actually had Q&A
+        if shared["qa_history"]:
+            try:
+                from llm_interviewer.answer_evaluator import AnswerEvaluator
+                from database.database import save_interview_report
+                import uuid
 
-            evaluator = AnswerEvaluator()
-            report = evaluator.evaluate_final_interview(
-                qa_history          = shared["qa_history"],
-                resume_parsed       = resume_parsed if isinstance(resume_parsed, dict) else {},
-                preferred_companies = companies,
-                target_level        = level,
-                avg_anxiety         = shared["anxiety"],
-                avg_confidence      = shared["confidence"]
-            )
-            shared["report_card"] = report
-            
-            session_id = str(uuid.uuid4())[:8]
-            save_interview_report(
-                session_id       = session_id,
-                candidate_name   = resume_parsed.get("name", "Candidate") if isinstance(resume_parsed, dict) else "Candidate",
-                target_companies = companies,
-                target_roles     = roles,
-                target_level     = level,
-                overall_score    = report.get("overall_score", 70),
-                verdict          = report.get("verdict", "Complete"),
-                report_json      = report
-            )
-        except Exception as e:
-            print(f"[REPORT ERROR] {e}")
-            shared["report_card"] = {}
+                evaluator = AnswerEvaluator(llm_backend=llm_backend, api_key=llm_api_key)
+                report = evaluator.evaluate_final_interview(
+                    qa_history          = shared["qa_history"],
+                    resume_parsed       = resume_parsed if isinstance(resume_parsed, dict) else {},
+                    preferred_companies = companies,
+                    target_level        = level,
+                    avg_anxiety         = shared["anxiety"],
+                    avg_confidence      = shared["confidence"]
+                )
+                # Guard against None return from evaluator
+                if report is None:
+                    report = {"overall_score": 0, "verdict": "Evaluation Failed", "summary": "Could not connect to LLM backend.", "strengths": [], "weaknesses": ["Evaluation unavailable"], "topic_scores": {}, "key_recommendation": "Ensure Ollama is running or provide a Groq API key."}
+                shared["report_card"] = report
+                
+                session_id = str(uuid.uuid4())[:8]
+                save_interview_report(
+                    session_id       = session_id,
+                    candidate_name   = resume_parsed.get("name", "Candidate") if isinstance(resume_parsed, dict) else "Candidate",
+                    target_companies = companies,
+                    target_roles     = roles,
+                    target_level     = level,
+                    overall_score    = report.get("overall_score", 70),
+                    verdict          = report.get("verdict", "Complete"),
+                    report_json      = report
+                )
+            except Exception as e:
+                print(f"[REPORT ERROR] {e}")
+                shared["report_card"] = {"overall_score": 0, "verdict": "Error", "summary": str(e), "strengths": [], "weaknesses": [], "topic_scores": {}, "key_recommendation": "Check logs for details."}
+        else:
+            shared["report_card"] = {"overall_score": 0, "verdict": "No Data", "summary": "Interview ended before any questions were answered.", "strengths": [], "weaknesses": [], "topic_scores": {}, "key_recommendation": "Try again with a working microphone and LLM backend."}
 
         shared["screen"] = "report"
 
@@ -281,16 +347,18 @@ def poll():
     global _last_avatar_state, _last_webcam_frame
 
     show_setup     = gr.update(visible=(shared["screen"] == "setup"))
-    show_loading   = gr.update(visible=False)
+    show_loading   = gr.update(visible=(shared["screen"] == "loading"))
     show_interview = gr.update(visible=(shared["screen"] == "interview"))
     show_report    = gr.update(visible=(shared["screen"] == "report"))
 
     state = shared["avatar"]
     if state != _last_avatar_state:
-        avatar_img = os.path.join(ASSETS, AVATAR_GIFS.get(state, "idle.webp"))
+        # map states: idle, listening, thinking, talking
+        html_state = state if state in ["idle", "listening", "thinking", "talking"] else "idle"
+        avatar_html = f'<div class="orb-container"><div class="orb orb-{html_state}"></div></div>'
         _last_avatar_state = state
     else:
-        avatar_img = gr.skip()
+        avatar_html = gr.skip()
 
     history_md = "\n\n".join(
         f"**Q{i+1}:** {qa['q']}\n\n**A:** {qa['a']}"
@@ -319,7 +387,8 @@ def poll():
         show_loading,
         show_interview,
         show_report,
-        avatar_img,
+        shared["state"],  # loading_status (on loading screen)
+        avatar_html,
         shared["state"],
         shared["transcript"].strip(),
         shared["anxiety"],
@@ -383,6 +452,17 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
                                 value="entry",
                                 label="Experience Level"
                                )
+                llm_backend  = gr.Radio(
+                                choices=["Local (Ollama)", "Cloud API (Groq)"],
+                                value="Local (Ollama)",
+                                label="LLM Backend"
+                               )
+                llm_api_key  = gr.Textbox(
+                                label="Groq API Key (If Cloud API)",
+                                type="password",
+                                value="",
+                                visible=False
+                               )
 
             # Card 2: Target & Strategy
             with gr.Column(elem_classes=["glass-panel"]):
@@ -408,8 +488,18 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
 
     # ── SCREEN 2: LOADING ─────────────────────────────────────────
     with gr.Column(visible=False, elem_classes=["glass-panel"]) as loading_screen:
-        gr.Markdown("<br><br><h2 style='text-align: center;'>⏳ Securing Secure Connection & Loading AI Weights...</h2>")
-        gr.Markdown("<p style='text-align: center;'>Please wait ~10 seconds. The interview will start automatically.</p>")
+        gr.Markdown("<br><br><h2 style='text-align: center;'>⏳ Initializing INTERVION AI Engine...</h2>")
+        loading_status = gr.Textbox(
+            label="Progress",
+            value="Starting...",
+            interactive=False,
+            elem_classes=["glass-panel"]
+        )
+        gr.HTML("""<div style='text-align: center; margin-top: 20px;'>
+            <div class="orb-container" style="height: 150px;">
+                <div class="orb orb-thinking"></div>
+            </div>
+        </div>""")
 
     # ── SCREEN 3: INTERVIEW ───────────────────────────────────────
     with gr.Column(visible=False) as interview_screen:
@@ -432,12 +522,11 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
                 gr.Markdown("<br>")
                 stop_btn  = gr.Button("End Session", elem_classes=["stop-btn"])
 
-            # Center - Avatar
-            with gr.Column(scale=2, elem_id="avatar_col"):
-                avatar_img  = gr.Image(
-                                value=os.path.join(ASSETS, AVATAR_GIFS["idle"]),
-                                interactive=False,
-                                show_label=False
+            # Center - Avatar (Voice Orb)
+            with gr.Column(scale=2):
+                avatar_html = gr.HTML(
+                                value='<div class="orb-container"><div class="orb orb-idle"></div></div>',
+                                elem_id="avatar_col"
                               )
 
         # Bottom - collapsible transcript/history
@@ -483,7 +572,8 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
     timer.tick(
         fn      = poll,
         outputs = [setup_screen, loading_screen, interview_screen, report_screen,
-                   avatar_img, state_box, transcript_box,
+                   loading_status,
+                   avatar_html, state_box, transcript_box,
                    anxiety_slider, confidence_slider, webcam_img, history_md,
                    score_box, verdict_box, summary_box, strengths_box, weaknesses_box, topic_scores_box, recommendation_box],
     )
@@ -491,8 +581,14 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
     # ── Button events ──────────────────────────────────────────────────
     start_btn.click(
         fn      = start_interview,
-        inputs  = [resume_file, companies, roles, level, duration, focus_weak, mic_dropdown],
+        inputs  = [resume_file, companies, roles, level, duration, focus_weak, mic_dropdown, llm_backend, llm_api_key],
         outputs = [status_box],
+    )
+    
+    llm_backend.change(
+        fn      = lambda x: gr.update(visible=(x == "Cloud API (Groq)")),
+        inputs  = [llm_backend],
+        outputs = [llm_api_key]
     )
 
     stop_btn.click(
@@ -506,6 +602,11 @@ with gr.Blocks(theme=theme, css=CUSTOM_CSS, title="INTERVION") as app:
         shared["qa_history"]  = []
         shared["transcript"]  = ""
         shared["state"]       = "Ready"
+        shared["avatar"]      = "idle"
+        shared["anxiety"]     = 0.0
+        shared["confidence"]  = 100.0
+        shared["webcam"]      = None
+        shared["running"]     = False
         return "Ready"
 
     restart_btn.click(

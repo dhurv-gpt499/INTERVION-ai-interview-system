@@ -53,10 +53,16 @@ class AudioCapture:
 
     def _capture_loop(self):
         while self.running:
-            chunk = self.stream.read(
-                self.chunk_size,
-                exception_on_overflow=False,
-            )
+            try:
+                chunk = self.stream.read(
+                    self.chunk_size,
+                    exception_on_overflow=False,
+                )
+            except (IOError, OSError, Exception) as e:
+                print(f"Error reading from mic: {e}")
+                self.running = False
+                break
+                
             audio_np = self.bytes_to_float32(chunk)
 
             try:
@@ -91,10 +97,21 @@ class AudioCapture:
             self.thread.join(timeout=1)
 
         if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
+            try:
+                self.stream.stop_stream()
+            except Exception:
+                pass
+            try:
+                self.stream.close()
+            except Exception:
+                pass
 
         self.p.terminate()
 
     def get_chunk(self):
-        return self.audio_queue.get()
+        while self.running:
+            try:
+                return self.audio_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+        return None

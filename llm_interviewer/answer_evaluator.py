@@ -6,8 +6,10 @@ OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL_NAME = "qwen2.5:latest"
 
 class AnswerEvaluator:
-    def __init__(self, db_conn=None):
+    def __init__(self, db_conn=None, llm_backend="Local (Ollama)", api_key=""):
         self.db_conn = db_conn
+        self.llm_backend = llm_backend
+        self.api_key = api_key
 
     def evaluate_async(self, question: str, answer: str, session_id: str = None, callback=None):
         """Runs the evaluation in a background thread so it doesn't block the pipeline."""
@@ -40,6 +42,23 @@ You must respond with ONLY a valid JSON object matching this exact schema:
 }}
 If the candidate's answer is very short, missing key details, or they seem stuck, set status to "MIDWAY". Otherwise set to "COMPLETE"."""
 
+        if self.llm_backend == "Cloud API (Groq)":
+            import os
+            api_key = self.api_key or os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                return {"technical_score": 5, "communication_score": 5, "feedback": "Missing Groq API Key.", "status": "COMPLETE"}
+            try:
+                res = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json={"model": "llama3-8b-8192", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=20
+                )
+                res.raise_for_status()
+                return json.loads(res.json()["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"[EVALUATOR CLOUD ERROR] {e}")
+                return {"technical_score": 5, "communication_score": 5, "feedback": "API Error.", "status": "COMPLETE"}
+
         payload = {
             "model": MODEL_NAME,
             "messages": [{"role": "system", "content": prompt}],
@@ -56,6 +75,31 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             data = response.json()
             content = data.get("message", {}).get("content", "{}")
             return json.loads(content)
+        except requests.exceptions.ConnectionError:
+            import os
+            api_key = os.environ.get("GROQ_API_KEY")
+            if api_key:
+                fallback_url = "https://api.groq.com/openai/v1/chat/completions"
+                fallback_payload = {
+                    "model": "llama3-8b-8192",
+                    "messages": [{"role": "system", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.2
+                }
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                try:
+                    res = requests.post(fallback_url, json=fallback_payload, headers=headers, timeout=20)
+                    res.raise_for_status()
+                    return json.loads(res.json()["choices"][0]["message"]["content"])
+                except Exception as e:
+                    print(f"[EVALUATOR FALLBACK ERROR] {e}")
+            print("[EVALUATOR ERROR] Connection to Ollama failed, and no GROQ fallback was available.")
+            return {
+                "technical_score": 5,
+                "communication_score": 5,
+                "feedback": "Error evaluating answer (Connection Failed).",
+                "status": "COMPLETE"
+            }
         except Exception as e:
             print(f"[EVALUATOR ERROR] {e}")
             return {
@@ -135,6 +179,34 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
     "key_recommendation": "<1 actionable piece of engineering advice for their next interview>"
 }}"""
 
+        def get_fallback_report(reason):
+            return {
+                "overall_score": 70,
+                "verdict": f"Completed ({reason})",
+                "summary": f"The candidate completed {len(qa_history)} interview turns. Detailed LLM scoring encountered an error: {reason}",
+                "strengths": ["Completed multiple technical turns."],
+                "weaknesses": ["Could provide more detail."],
+                "topic_scores": {"Technical Depth & Architecture": 70, "Problem Solving & Logic": 70, "Communication & Clarity": 75, "Composure & Confidence": int(avg_confidence)},
+                "key_recommendation": "Review transcript to practice deeper explanations."
+            }
+
+        if self.llm_backend == "Cloud API (Groq)":
+            import os
+            api_key = self.api_key or os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                return get_fallback_report("Missing Groq API Key")
+            try:
+                res = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json={"model": "llama3-70b-8192", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=45
+                )
+                res.raise_for_status()
+                return json.loads(res.json()["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"[EVALUATOR CLOUD ERROR] {e}")
+                return get_fallback_report("Cloud API Error")
+
         payload = {
             "model": MODEL_NAME,
             "messages": [{"role": "system", "content": prompt}],
@@ -155,6 +227,28 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             report = json.loads(content)
             print(f"[EVALUATOR] Final evaluation complete -> Score: {report.get('overall_score')}/100 | Verdict: {report.get('verdict')}")
             return report
+        except requests.exceptions.ConnectionError:
+            import os
+            api_key = os.environ.get("GROQ_API_KEY")
+            if api_key:
+                fallback_url = "https://api.groq.com/openai/v1/chat/completions"
+                fallback_payload = {
+                    "model": "llama3-70b-8192",
+                    "messages": [{"role": "system", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.2
+                }
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                try:
+                    res = requests.post(fallback_url, json=fallback_payload, headers=headers, timeout=45)
+                    res.raise_for_status()
+                    report = json.loads(res.json()["choices"][0]["message"]["content"])
+                    print(f"[EVALUATOR] Final evaluation complete (GROQ Fallback) -> Score: {report.get('overall_score')}/100")
+                    return report
+                except Exception as e:
+                    print(f"[EVALUATOR FALLBACK ERROR] {e}")
+            
+            print("[EVALUATOR ERROR] Failed to generate final evaluation: Ollama down & no Groq API key.")
         except Exception as e:
             print(f"[EVALUATOR ERROR] Failed to generate final evaluation: {e}")
             return {

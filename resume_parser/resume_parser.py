@@ -198,9 +198,11 @@ def post_process(markdown_text: str, parsed: dict) -> dict:
     import re
     
     # Fix 1 — GitHub from markdown links
-    if not parsed["personal_info"].get("github"):
+    if not parsed.get("personal_info", {}).get("github"):
         github_match = re.search(r'https?://github\.com/[\w\-]+', markdown_text)
         if github_match:
+            if "personal_info" not in parsed:
+                parsed["personal_info"] = {}
             parsed["personal_info"]["github"] = github_match.group()
     
     # Fix 2 — Clean HTML entities from all string values recursively

@@ -1,1 +1,1 @@
-from .utils import fetch_leetcode_stats , fetch_codeforces_stats
+from .cp_stats import fetch_leetcode_stats , fetch_codeforces_stats

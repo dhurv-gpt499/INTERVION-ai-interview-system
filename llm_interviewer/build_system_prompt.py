@@ -9,10 +9,14 @@ def build_interviewer_system_prompt(
     target_level: str,
     domain: str,
     duration_minutes: int = 20,
-    ordered_topics: list[str] = [],
-    past_weak_areas: list[str] = [],
-    past_covered_topics: list[str] = [],
+    ordered_topics: list[str] = None,
+    past_weak_areas: list[str] = None,
+    past_covered_topics: list[str] = None,
 ) -> str:
+
+    if ordered_topics is None: ordered_topics = []
+    if past_weak_areas is None: past_weak_areas = []
+    if past_covered_topics is None: past_covered_topics = []
 
     companies_str = ", ".join(preferred_companies) or "top tech companies"
     roles_str     = ", ".join(preferred_roles)     or "software engineering"
@@ -56,7 +60,7 @@ def build_interviewer_system_prompt(
         except Exception as e:
             print(f"Error loading question bank: {e}")
 
-    r = resume_parsed
+    r = resume_parsed or {}
     profile = (
         f"Education: {r.get('education', '')}\n"
         f"Skills: {r.get('skills', '')}\n"

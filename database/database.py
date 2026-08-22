@@ -178,16 +178,12 @@ def update_parsed_data(email: str, parsed_data: dict, pdf_path: str) -> bool:
             UPDATE resumes
             SET phone       = ?,
                 linkedin    = ?,
-                github      = ?,
-                pdf_path    = ?,
-                parsed_json = ?
+                github      = ?
             WHERE email = ?
         """, (
             parsed_data["personal_info"]["phone"],
             parsed_data["personal_info"]["linkedin"],
             parsed_data["personal_info"]["github"],
-            pdf_path,
-            json.dumps(parsed_data),
             email
         ))
         

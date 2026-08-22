@@ -8,13 +8,15 @@ MODEL_NAME = "qwen2.5:latest"
 
 
 class QwenInterviewer:
-    def __init__(self):
+    def __init__(self, llm_backend="Local (Ollama)", api_key=""):
         self.messages      = []     # full conversation history
         self.start_time    = None
         self.duration_sec  = 0
         self.turn_count    = 0
         self.is_active     = False
         self.rag           = None
+        self.llm_backend   = llm_backend
+        self.api_key       = api_key
 
     def start(
         self,
@@ -64,7 +66,7 @@ class QwenInterviewer:
 
     def receive_answer(self, answer_text: str):
         if not self.is_active:
-            return
+            return iter([])
 
         # check time before responding
         if self.is_time_up():
@@ -109,6 +111,46 @@ class QwenInterviewer:
         if ephemeral_hint:
             messages_payload.append({"role": "system", "content": ephemeral_hint})
 
+        full_response = ""
+
+        # Use Cloud API directly if selected
+        if self.llm_backend == "Cloud API (Groq)":
+            import os
+            api_key = self.api_key or os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                yield "I'm sorry, you selected Cloud API but no Groq API Key was provided."
+                return
+            
+            try:
+                fb_response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json={"model": "llama-3.1-8b-instant", "messages": messages_payload, "stream": True, "temperature": 0.7},
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    stream=True, timeout=10
+                )
+                fb_response.raise_for_status()
+                for line in fb_response.iter_lines():
+                    if line:
+                        decoded = line.decode('utf-8')
+                        if decoded.startswith("data: "):
+                            data_str = decoded[6:]
+                            if data_str.strip() == "[DONE]": break
+                            try:
+                                token = json.loads(data_str)["choices"][0].get("delta", {}).get("content", "")
+
+                                if token:
+                                    full_response += token
+                                    yield token
+                            except Exception: pass
+            except Exception as e:
+                yield f"Cloud API Error: {e}"
+                return
+            
+            self.messages.append({"role": "assistant", "content": full_response})
+            if "That concludes our interview" in full_response:
+                self.is_active = False
+            return
+
         payload = {
             "model"   : MODEL_NAME,
             "messages": messages_payload,
@@ -118,8 +160,6 @@ class QwenInterviewer:
                 "num_ctx"    : 4096,
             }
         }
-
-        full_response = ""
 
         try:
             response = requests.post(
@@ -137,14 +177,51 @@ class QwenInterviewer:
                 chunk = json.loads(line)
                 token = chunk.get("message", {}).get("content", "")
                 full_response += token
-                yield token              # ← feed directly to tts_engine
+                yield token
 
                 if chunk.get("done", False):
                     break
 
-        except requests.exceptions.ConnectionError:
-            yield "I'm sorry, there seems to be a technical issue. Please wait."
-            return
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.HTTPError):
+            import os
+            api_key = self.api_key or os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                yield "I'm sorry, I cannot connect to the local Ollama instance, and no GROQ_API_KEY environment variable was found for the fallback API. Please start Ollama or set your GROQ_API_KEY."
+                return
+
+            fallback_url = "https://api.groq.com/openai/v1/chat/completions"
+            fallback_payload = {
+                "model": "llama-3.1-8b-instant",
+                "messages": messages_payload,
+                "stream": True,
+                "temperature": 0.7
+            }
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            try:
+                fb_response = requests.post(fallback_url, json=fallback_payload, headers=headers, stream=True, timeout=10)
+                fb_response.raise_for_status()
+                for line in fb_response.iter_lines():
+                    if line:
+                        decoded = line.decode('utf-8')
+                        if decoded.startswith("data: "):
+                            data_str = decoded[6:]
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                token = chunk["choices"][0].get("delta", {}).get("content", "")
+                                if token:
+                                    full_response += token
+                                    yield token
+                            except json.JSONDecodeError:
+                                pass
+            except Exception as e:
+                yield f"Fallback API Error: {e}"
+                return
         except Exception as e:
             yield f"Error: {e}"
             return

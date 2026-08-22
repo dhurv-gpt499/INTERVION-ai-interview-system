@@ -26,7 +26,6 @@ class InterviewStateMachine:
     VALID_TRANSITIONS = {
         InterviewState.IDLE : [InterviewState.QUESTION_ASKED,
                            InterviewState.AI_SPEAKING],
-        InterviewState.IDLE             : [InterviewState.QUESTION_ASKED],
         InterviewState.QUESTION_ASKED   : [InterviewState.LISTENING,
                                            InterviewState.NO_ANSWER],
         InterviewState.LISTENING        : [InterviewState.CANDIDATE_PAUSED,

@@ -6,7 +6,7 @@ class SpeechSegmenter:
         self,
         speech_queue,
         on_event,
-        silence_frames_threshold = 60,    # 2s  — post speech silence before finalizing (fast response)
+        silence_frames_threshold = 150,   # 5s  — post speech silence before finalizing (longer pause for thinking)
         no_answer_threshold      = 469,   # 15s — before first word (comfortable thinking time)
         max_speech_frames        = 250,   # 8s  — force chunk
         vad_threshold            = 0.3,   # Lowered from 0.5 to catch quieter mics
@@ -49,7 +49,7 @@ class SpeechSegmenter:
 
             if self.speech_buffer:
                 self.silence_frames += 1
-                self.speech_buffer.append(frame)
+                # Do NOT append silence frames to speech buffer to avoid Whisper hallucinations on room noise
 
                 if self.silence_frames >= self.silence_frames_threshold:
                     self._finalize("post_speech_silence")

@@ -21,6 +21,8 @@ def run_pipeline(
     duration_minutes    : int  = 20,
     focus_weaknesses    : bool = True,
     mic_device_index    : int  = None,
+    llm_backend         : str  = "Local (Ollama)",
+    llm_api_key         : str  = "",
     # UI callbacks
     on_state_change     = None,
     on_transcript       = None,
@@ -47,8 +49,8 @@ def run_pipeline(
     llm_queue     = queue.Queue()
     
     sm            = InterviewStateMachine()
-    interviewer   = QwenInterviewer()
-    evaluator     = AnswerEvaluator()
+    interviewer   = QwenInterviewer(llm_backend=llm_backend, api_key=llm_api_key)
+    evaluator     = AnswerEvaluator(llm_backend=llm_backend, api_key=llm_api_key)
 
     # ----------------------------------------------------------------
     # Background Worker Threads
@@ -244,7 +246,7 @@ def run_pipeline(
             with torch.no_grad():
                 prob = silero_vad(tensor, 16000).item()
 
-            is_speech = prob > 0.5
+            is_speech = prob > segmenter.vad_threshold
             if is_speech and sm.current_state == InterviewState.QUESTION_ASKED:
                 sm.start_answer()
                 sm.transition(InterviewState.LISTENING)

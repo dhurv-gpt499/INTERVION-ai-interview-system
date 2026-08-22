@@ -46,10 +46,14 @@ def _generator_worker():
             # Stopped mid-flight: mark done and discard
             _text_queue.task_done()
             continue
-        audio = _loop.run_until_complete(_generate_audio(text))
-        if not _stop_event.is_set():
-            _audio_queue.put((text, audio))
-        _text_queue.task_done()
+        try:
+            audio = _loop.run_until_complete(_generate_audio(text))
+            if not _stop_event.is_set():
+                _audio_queue.put((text, audio))
+        except Exception as e:
+            print(f"[TTS] Generation error: {e}")
+        finally:
+            _text_queue.task_done()
 
 
 # ── Player thread: plays pre-generated audio immediately ────────────────
@@ -88,15 +92,25 @@ _gen_thread.start()
 _player_thread.start()
 
 
+import re
+
 # ── Sentence extractor ──────────────────────────────────────────────────
 def _extract_sentences(buffer: str) -> tuple:
-    sentences, current = [], ""
-    for char in buffer:
-        current += char
-        if char in ".!?" and current.strip():
-            sentences.append(current.strip())
-            current = ""
-    return sentences, current
+    pattern = r'(?<=[.!?])\s+'
+    parts = re.split(pattern, buffer)
+    if not parts:
+        return [], buffer
+    # Last part might be incomplete
+    sentences = parts[:-1]
+    remainder = parts[-1]
+    # Only return sentences that look complete (end with punctuation)
+    complete = []
+    for s in sentences:
+        complete.append(s.strip())
+    if remainder.strip() and remainder.strip()[-1] in '.!?':
+        complete.append(remainder.strip())
+        remainder = ''
+    return complete, remainder
 
 
 # ── Public API ──────────────────────────────────────────────────────────
@@ -167,9 +181,12 @@ def stop():
         while not q.empty():
             try:
                 q.get_nowait()
-                q.task_done()
+                try:
+                    q.task_done()
+                except ValueError:
+                    pass
             except queue.Empty:
                 break
 
     # Clear stop flag after 1s so next interview session works normally
-    threading.Timer(1.0, _stop_event.clear).start()
+    _stop_event.clear()

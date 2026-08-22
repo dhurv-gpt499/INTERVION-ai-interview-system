@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTERVION 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="space-y-6">
+            <h1 class="text-4xl font-bold text-center text-blue-400 mb-8">INTERVION 2.0</h1>
+            
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Interview Configuration</h2>
+                <form id="setup-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400">Resume (PDF)</label>
+                        <input type="file" id="resume" accept=".pdf" class="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400">Target Companies (comma separated)</label>
+                        <input type="text" id="companies" value="Google, Microsoft" class="mt-1 block w-full rounded bg-gray-700 border-gray-600 text-white p-2">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400">Target Roles (comma separated)</label>
+                        <input type="text" id="roles" value="Software Engineer" class="mt-1 block w-full rounded bg-gray-700 border-gray-600 text-white p-2">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400">Level</label>
+                            <select id="level" class="mt-1 block w-full rounded bg-gray-700 border-gray-600 text-white p-2">
+                                <option>Entry-Level</option>
+                                <option selected>Mid-Level</option>
+                                <option>Senior</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400">LLM Backend</label>
+                            <select id="llm_backend" class="mt-1 block w-full rounded bg-gray-700 border-gray-600 text-white p-2">
+                                <option selected>Cloud API (Groq)</option>
+                                <option>Local (Ollama)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400">API Key</label>
+                        <input type="password" id="api_key" placeholder="GROQ API Key" class="mt-1 block w-full rounded bg-gray-700 border-gray-600 text-white p-2">
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded mt-6 transition duration-200">
+                        Start Interview
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="hidden text-center space-y-6 mt-20">
+            <h2 class="text-3xl font-bold text-blue-400">Initializing Engine...</h2>
+            <div class="flex justify-center my-8">
+                <div class="orb-container">
+                    <div class="orb orb-thinking"></div>
+                </div>
+            </div>
+            <p id="loading-status" class="text-gray-400 text-lg">Parsing resume...</p>
+        </div>
+
+        <!-- Interview Screen -->
+        <div id="interview-screen" class="hidden h-full flex flex-col gap-6">
+            <div class="flex justify-between items-center bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <div class="text-xl font-semibold text-blue-400">Live Interview</div>
+                <div id="status-badge" class="px-3 py-1 rounded-full bg-yellow-600 text-white text-sm">Connecting...</div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Avatar -->
+                <div class="col-span-1 md:col-span-1 bg-gray-800 rounded-lg p-8 flex flex-col items-center justify-center border border-gray-700 min-h-[300px]">
+                    <div class="orb-container">
+                        <div id="avatar-orb" class="orb orb-idle"></div>
+                    </div>
+                    <p id="ai-status-text" class="mt-6 text-gray-400 text-center">AI is ready</p>
+                </div>
+                
+                <!-- Transcript -->
+                <div class="col-span-1 md:col-span-2 bg-gray-800 rounded-lg p-6 flex flex-col border border-gray-700 min-h-[300px]">
+                    <h3 class="text-lg font-medium text-gray-300 mb-4">Live Transcript</h3>
+                    <div id="transcript-box" class="flex-1 bg-gray-900 rounded p-4 overflow-y-auto font-mono text-sm space-y-4 max-h-[400px]">
+                        <!-- Transcript entries go here -->
+                    </div>
+                </div>
+            </div>
+
+            <button id="stop-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded transition duration-200">
+                End Interview
+            </button>
+        </div>
+
+        <!-- Report Screen -->
+        <div id="report-screen" class="hidden space-y-6">
+            <h2 class="text-3xl font-bold text-center text-green-400">Interview Report Card</h2>
+            <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 text-center">
+                <div class="text-6xl font-bold mb-2" id="report-score">--/100</div>
+                <div class="text-xl text-gray-400" id="report-verdict">Evaluating...</div>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <h3 class="text-xl font-semibold mb-2">Summary</h3>
+                <p id="report-summary" class="text-gray-300"></p>
+            </div>
+            <button onclick="location.reload()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
+                Return Home
+            </button>
+        </div>
+
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
+
