@@ -59,18 +59,16 @@ async def handle_interview_session(websocket: WebSocket, config: dict):
             
     # Send initial setup
     await notify_state("loading")
-    interviewer.build_system_prompt(
+    # Start the interviewer and get the first question generator
+    first_response = interviewer.start(
         resume_parsed=resume_parsed,
         preferred_companies=companies,
         preferred_roles=roles,
-        target_level=level
+        target_level=level,
+        domain="General Tech"
     )
-    
-    # Generate first question
     sm.transition(InterviewState.AI_SPEAKING)
     await notify_state("ai_speaking")
-    
-    first_response = interviewer.receive_answer("")
     await stream_tts_to_websocket(first_response, websocket, notify_transcript)
     
     sm.set_question(interviewer.messages[-1]["content"])
