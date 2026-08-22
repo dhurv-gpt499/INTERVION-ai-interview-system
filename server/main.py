@@ -74,8 +74,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("[WS] Client connected")
     
-    # We will import the async pipeline handler here
-    from v2.server.pipeline_async import handle_interview_session
+    from server.pipeline_async import handle_interview_session
     
     try:
         # Wait for the initial config message from the client

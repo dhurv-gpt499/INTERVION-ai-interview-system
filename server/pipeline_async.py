@@ -12,7 +12,7 @@ from audio_processor.interview_state_machine import InterviewStateMachine, Inter
 from llm_interviewer.interviewer import QwenInterviewer
 from llm_interviewer.answer_evaluator import AnswerEvaluator
 
-from v2.server.stt_engine import STTEngine
+from server.stt_engine import STTEngine
 import edge_tts
 
 async def handle_interview_session(websocket: WebSocket, config: dict):

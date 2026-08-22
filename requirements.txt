@@ -6,10 +6,6 @@ protobuf==4.25.3
 opencv-python>=4.8.0.76
 mediapipe==0.10.14
 
-# Audio Capture & Low-Latency Playback
-PyAudio>=0.2.14
-pygame==2.6.1
-
 # Speech-to-Text & Text-to-Speech Engines
 faster-whisper>=1.0.3
 edge-tts>=6.1.10
@@ -20,10 +16,12 @@ docling>=2.0.0
 
 # Network & Real-time UI Dashboard
 requests>=2.31.0
-gradio>=4.40.0
 torch>=2.0.0
 Pillow>=10.0.0
 
+# WebSockets & Web Server
 fastapi>=0.111.0
 uvicorn>=0.30.1
 websockets>=12.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
