@@ -25,8 +25,8 @@ def extract_text(pdf_path: str) -> str:
     return result.document.export_to_markdown()
 
 
-def llm_extract(markdown_text: str) -> dict:
-    """Send clean markdown to Qwen2.5:7B and get structured JSON back."""
+def llm_extract(markdown_text: str, llm_backend: str = "Local (Ollama)", api_key: str = "") -> dict:
+    """Send markdown to LLM to extract structured JSON."""
     
     prompt = f"""You are a resume parser. Extract information from the resume markdown below and return ONLY a valid JSON object. No explanation, no markdown, no code blocks. Just raw JSON.
 
@@ -107,6 +107,27 @@ Return exactly this structure:
 Resume:
 {markdown_text}"""
 
+    if llm_backend == "Cloud API (Groq)":
+        if not api_key:
+            print("Groq selected but no API key provided. Falling back to Ollama.")
+        else:
+            try:
+                import os
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                payload = {
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "system", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.1
+                }
+                res = requests.post(url, json=payload, headers=headers, timeout=30)
+                res.raise_for_status()
+                return json.loads(res.json()["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"Groq API Error: {e}. Falling back to Ollama.")
+
+    # Fallback / Local (Ollama)
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
@@ -140,7 +161,7 @@ Resume:
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {e}")
         print(f"LLM returned: {raw_response[:300]}")
-        return retry_extract(markdown_text)
+        return retry_extract(markdown_text, llm_backend, api_key)
     
     except requests.exceptions.ConnectionError:
         print("Ollama not running! Run: ollama serve")
@@ -151,7 +172,7 @@ Resume:
         return {}
 
 
-def retry_extract(markdown_text: str) -> dict:
+def retry_extract(markdown_text: str, llm_backend: str = "Local (Ollama)", api_key: str = "") -> dict:
     """Fallback with stricter prompt at temperature 0."""
     
     prompt = f"""Extract resume data as JSON only. Return nothing except the JSON object.
@@ -171,6 +192,24 @@ def retry_extract(markdown_text: str) -> dict:
 
 Resume:
 {markdown_text}"""
+
+    if llm_backend == "Cloud API (Groq)":
+        if api_key:
+            try:
+                import os
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                payload = {
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "system", "content": prompt}],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.0
+                }
+                res = requests.post(url, json=payload, headers=headers, timeout=30)
+                res.raise_for_status()
+                return json.loads(res.json()["choices"][0]["message"]["content"])
+            except Exception as e:
+                print(f"Groq API Error: {e}. Falling back to Ollama.")
 
     try:
         response = requests.post(OLLAMA_URL, json={
@@ -232,7 +271,7 @@ def post_process(markdown_text: str, parsed: dict) -> dict:
     return parsed
 
 
-def parse_resume(pdf_path: str):
+def parse_resume(pdf_path: str, llm_backend: str = "Local (Ollama)", api_key: str = ""):
     print("Extracting text with Docling...")
     markdown_text = extract_text(pdf_path)
     
@@ -240,8 +279,8 @@ def parse_resume(pdf_path: str):
         print("No text extracted!")
         return {}, ""
     
-    print("Sending to Qwen2.5:7B for parsing...")
-    parsed = llm_extract(markdown_text)
+    print(f"Sending to LLM ({llm_backend}) for parsing...")
+    parsed = llm_extract(markdown_text, llm_backend, api_key)
     
     if not parsed:
         return {}, markdown_text

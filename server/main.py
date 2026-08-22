@@ -39,18 +39,23 @@ async def setup_interview(
     Parses the resume and returns the initial interview configuration.
     """
     resume_parsed = {}
-    if resume:
-        # Save temp file
-        temp_path = f"temp_{resume.filename}"
+    # Save temp file
+    temp_path = f"temp_{resume.filename}" if resume else None
+    if temp_path:
         with open(temp_path, "wb") as f:
             f.write(await resume.read())
-        try:
-            resume_parsed, _ = parse_resume(temp_path)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to parse resume: {e}")
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            
+    try:
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if temp_path:
+            resume_parsed, _ = parse_resume(temp_path, llm_backend=llm_backend, api_key=api_key)
+        else:
+            resume_parsed = {}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse resume: {e}")
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
     company_list = [c.strip() for c in companies.split(",") if c.strip()]
     role_list = [r.strip() for r in roles.split(",") if r.strip()]
