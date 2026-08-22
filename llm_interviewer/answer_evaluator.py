@@ -50,7 +50,7 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             try:
                 res = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "llama3-8b-8192", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    json={"model": "qwen/qwen3.6-27b", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=20
                 )
                 res.raise_for_status()
@@ -81,7 +81,7 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             if api_key:
                 fallback_url = "https://api.groq.com/openai/v1/chat/completions"
                 fallback_payload = {
-                    "model": "llama3-8b-8192",
+                    "model": "qwen/qwen3.6-27b",
                     "messages": [{"role": "system", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.2
@@ -198,7 +198,7 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             try:
                 res = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "llama3-70b-8192", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    json={"model": "qwen/qwen3.6-27b", "messages": [{"role": "system", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=45
                 )
                 res.raise_for_status()
@@ -233,7 +233,7 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             if api_key:
                 fallback_url = "https://api.groq.com/openai/v1/chat/completions"
                 fallback_payload = {
-                    "model": "llama3-70b-8192",
+                    "model": "qwen/qwen3.6-27b",
                     "messages": [{"role": "system", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.2

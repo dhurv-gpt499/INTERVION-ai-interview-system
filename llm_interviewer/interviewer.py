@@ -124,7 +124,7 @@ class QwenInterviewer:
             try:
                 fb_response = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "llama-3.1-8b-instant", "messages": messages_payload, "stream": True, "temperature": 0.7},
+                    json={"model": "qwen/qwen3.6-27b", "messages": messages_payload, "stream": True, "temperature": 0.7},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                     stream=True, timeout=10
                 )
@@ -191,7 +191,7 @@ class QwenInterviewer:
 
             fallback_url = "https://api.groq.com/openai/v1/chat/completions"
             fallback_payload = {
-                "model": "llama-3.1-8b-instant",
+                "model": "qwen/qwen3.6-27b",
                 "messages": messages_payload,
                 "stream": True,
                 "temperature": 0.7

@@ -116,7 +116,7 @@ Resume:
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 payload = {
-                    "model": "llama-3.1-8b-instant",
+                    "model": "qwen/qwen3.6-27b",
                     "messages": [{"role": "system", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.1
@@ -200,7 +200,7 @@ Resume:
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 payload = {
-                    "model": "llama-3.1-8b-instant",
+                    "model": "qwen/qwen3.6-27b",
                     "messages": [{"role": "system", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.0
