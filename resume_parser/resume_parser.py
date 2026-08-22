@@ -123,7 +123,7 @@ Resume:
                 }
                 res = requests.post(url, json=payload, headers=headers, timeout=30)
                 res.raise_for_status()
-                return json.loads(res.json()["choices"][0]["message"]["content"])
+                return json.loads(res.json()["choices"][0]["message"]["content"], strict=False)
             except Exception as e:
                 print(f"Groq API Error: {e}. Falling back to Ollama.")
 
@@ -156,7 +156,7 @@ Resume:
         if start != -1 and end != -1:
             raw_response = raw_response[start:end+1]
         
-        return json.loads(raw_response)
+        return json.loads(raw_response, strict=False)
 
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {e}")
@@ -207,7 +207,7 @@ Resume:
                 }
                 res = requests.post(url, json=payload, headers=headers, timeout=30)
                 res.raise_for_status()
-                return json.loads(res.json()["choices"][0]["message"]["content"])
+                return json.loads(res.json()["choices"][0]["message"]["content"], strict=False)
             except Exception as e:
                 print(f"Groq API Error: {e}. Falling back to Ollama.")
 
@@ -225,7 +225,7 @@ Resume:
         end = raw.rfind('}')
         if start != -1 and end != -1:
             raw = raw[start:end+1]
-        return json.loads(raw)
+        return json.loads(raw, strict=False)
     
     except Exception as e:
         print(f"Retry failed: {e}")

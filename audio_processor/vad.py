@@ -58,10 +58,11 @@ class SpeechSegmenter:
         if not self.speech_buffer:
             return
 
-        audio = np.concatenate(self.speech_buffer)
-        self.speech_queue.put(audio)
-
-        self.speech_buffer.clear()
+        if self.speech_queue is not None:
+            audio = np.concatenate(self.speech_buffer)
+            self.speech_queue.put(audio)
+            self.speech_buffer.clear()
+            
         self.speech_frames  = 0
         self.silence_frames = 0
 
