@@ -27,7 +27,7 @@ setupForm.addEventListener("submit", async (e) => {
     formData.append("roles", document.getElementById("roles").value);
     formData.append("level", document.getElementById("level").value);
     formData.append("llm_backend", document.getElementById("llm_backend").value);
-    formData.append("llm_api_key", document.getElementById("api_key").value);
+
     
     try {
         const response = await fetch("/api/setup", {

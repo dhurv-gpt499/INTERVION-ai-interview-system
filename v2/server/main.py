@@ -10,6 +10,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from resume_parser.resume_parser import parse_resume
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="INTERVION 2.0 API")
 
@@ -30,8 +33,7 @@ async def setup_interview(
     level: str = Form("Mid-Level"),
     duration: int = Form(20),
     focus_weak: bool = Form(True),
-    llm_backend: str = Form("Cloud API (Groq)"),
-    llm_api_key: str = Form("")
+    llm_backend: str = Form("Cloud API (Groq)")
 ):
     """
     Parses the resume and returns the initial interview configuration.
@@ -63,7 +65,7 @@ async def setup_interview(
             "duration": duration,
             "focus_weak": focus_weak,
             "llm_backend": llm_backend,
-            "llm_api_key": llm_api_key
+            "llm_api_key": os.environ.get("GROQ_API_KEY", "")
         }
     }
 
