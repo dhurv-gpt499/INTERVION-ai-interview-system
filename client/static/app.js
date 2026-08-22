@@ -158,22 +158,60 @@ function setOrbState(state) {
 function addTranscript(text, isFinal) {
     if (!text.trim()) return;
     
+    const isAI = text.startsWith("??:");
+    const cleanText = isAI ? text.replace("??:", "").trim() : text;
+    
+    // Update Subtitle Box for AI
+    if (isAI) {
+        const subtitleEl = document.getElementById("ai-status-text");
+        subtitleEl.textContent = cleanText;
+        subtitleEl.className = "text-white text-xl transition-opacity duration-300 font-semibold";
+    }
+
+    const targetBoxId = isAI ? "transcript-interviewer" : "transcript-you";
+    const targetBox = document.getElementById(targetBoxId);
+    
     // Check if the last element is a partial transcript
-    const lastEl = transcriptBox.lastElementChild;
+    const lastEl = targetBox.lastElementChild;
     if (lastEl && lastEl.classList.contains("partial")) {
-        transcriptBox.removeChild(lastEl);
+        targetBox.removeChild(lastEl);
     }
     
     const div = document.createElement("div");
-    div.className = "p-3 rounded-lg " + (text.startsWith("??") ? "bg-blue-900/50 text-blue-100" : "bg-gray-800 text-gray-200");
+    div.className = "p-3 rounded-lg " + (isAI ? "bg-blue-900/50 text-blue-100" : "bg-gray-800 text-gray-200");
     if (!isFinal) {
         div.classList.add("partial", "opacity-50");
     }
-    div.textContent = text;
+    div.textContent = cleanText;
     
-    transcriptBox.appendChild(div);
-    transcriptBox.scrollTop = transcriptBox.scrollHeight;
+    targetBox.appendChild(div);
+    targetBox.scrollTop = targetBox.scrollHeight;
 }
+
+// Tab Switching Logic
+document.getElementById("tab-interviewer").addEventListener("click", (e) => {
+    e.target.classList.add("text-blue-400", "border-b-2", "border-blue-400");
+    e.target.classList.remove("text-gray-500");
+    
+    const youBtn = document.getElementById("tab-you");
+    youBtn.classList.remove("text-blue-400", "border-b-2", "border-blue-400");
+    youBtn.classList.add("text-gray-500");
+    
+    document.getElementById("transcript-interviewer").classList.remove("hidden");
+    document.getElementById("transcript-you").classList.add("hidden");
+});
+
+document.getElementById("tab-you").addEventListener("click", (e) => {
+    e.target.classList.add("text-blue-400", "border-b-2", "border-blue-400");
+    e.target.classList.remove("text-gray-500");
+    
+    const intBtn = document.getElementById("tab-interviewer");
+    intBtn.classList.remove("text-blue-400", "border-b-2", "border-blue-400");
+    intBtn.classList.add("text-gray-500");
+    
+    document.getElementById("transcript-you").classList.remove("hidden");
+    document.getElementById("transcript-interviewer").classList.add("hidden");
+});
 
 function showReport(report) {
     interviewScreen.classList.add("hidden");

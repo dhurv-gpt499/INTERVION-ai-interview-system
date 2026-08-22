@@ -78,19 +78,29 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Avatar -->
-                <div class="col-span-1 md:col-span-1 bg-gray-800 rounded-lg p-8 flex flex-col items-center justify-center border border-gray-700 min-h-[300px]">
-                    <div class="orb-container">
+                <!-- Avatar & Subtitle -->
+                <div class="col-span-1 md:col-span-1 bg-gray-800 rounded-lg p-8 flex flex-col items-center justify-center border border-gray-700 min-h-[300px] relative overflow-hidden">
+                    <div class="orb-container mb-6">
                         <div id="avatar-orb" class="orb orb-idle"></div>
                     </div>
-                    <p id="ai-status-text" class="mt-6 text-gray-400 text-center">AI is ready</p>
+                    <div id="subtitle-box" class="w-full text-center min-h-[60px] flex items-center justify-center">
+                        <p id="ai-status-text" class="text-gray-300 text-lg italic transition-opacity duration-300">AI is ready...</p>
+                    </div>
                 </div>
                 
-                <!-- Transcript -->
+                <!-- Transcript Tabs -->
                 <div class="col-span-1 md:col-span-2 bg-gray-800 rounded-lg p-6 flex flex-col border border-gray-700 min-h-[300px]">
-                    <h3 class="text-lg font-medium text-gray-300 mb-4">Live Transcript</h3>
-                    <div id="transcript-box" class="flex-1 bg-gray-900 rounded p-4 overflow-y-auto font-mono text-sm space-y-4 max-h-[400px]">
-                        <!-- Transcript entries go here -->
+                    <div class="flex border-b border-gray-700 mb-4">
+                        <button id="tab-interviewer" class="px-4 py-2 text-blue-400 border-b-2 border-blue-400 font-medium focus:outline-none transition-colors">Interviewer</button>
+                        <button id="tab-you" class="px-4 py-2 text-gray-500 hover:text-gray-300 font-medium focus:outline-none transition-colors">You</button>
+                    </div>
+                    
+                    <div id="transcript-interviewer" class="flex-1 bg-gray-900 rounded p-4 overflow-y-auto font-mono text-sm space-y-4 max-h-[400px]">
+                        <!-- Interviewer Transcript -->
+                    </div>
+                    
+                    <div id="transcript-you" class="hidden flex-1 bg-gray-900 rounded p-4 overflow-y-auto font-mono text-sm space-y-4 max-h-[400px]">
+                        <!-- Candidate Transcript -->
                     </div>
                 </div>
             </div>
