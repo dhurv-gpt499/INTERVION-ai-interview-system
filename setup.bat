@@ -75,20 +75,12 @@ echo [INFO] Virtual environment activated: %VIRTUAL_ENV%
 
 :: 4. Install Dependencies
 echo.
-echo [4/5] Installing Dependencies (PyTorch >= 2.4 with CUDA, Whisper, Gradio, etc.)...
+echo [4/5] Installing Dependencies (PyTorch >= 2.4 with CUDA, Whisper, FastAPI, etc.)...
 echo [INFO] Upgrading pip...
 python -m pip install --upgrade pip --quiet
 
 echo [INFO] Installing PyTorch >= 2.4.0 with CUDA 12.4 support...
 pip install torch>=2.4.0 torchaudio torchvision --index-url https://download.pytorch.org/whl/cu124
-
-echo [INFO] Installing PyAudio for microphone capture...
-pip install PyAudio
-if %errorlevel% neq 0 (
-    echo [WARNING] Default PyAudio wheel failed. Attempting pipwin installation...
-    pip install pipwin
-    pipwin install pyaudio
-)
 
 echo [INFO] Installing required project dependencies from requirements.txt...
 pip install -r requirements.txt --no-cache-dir
@@ -102,9 +94,9 @@ if %errorlevel% neq 0 (
 :: 5. Launch UI
 echo.
 echo ===============================================================================
-echo [5/5] Setup Complete! Launching INTERVION AI UI...
+echo [5/5] Setup Complete! Launching INTERVION 2.0 Web Server...
 echo ===============================================================================
 echo.
-python ui\app.py
+uvicorn server.main:app --reload
 
 pause

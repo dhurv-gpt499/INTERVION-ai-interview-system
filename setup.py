@@ -112,8 +112,8 @@ def run_gui(stats):
         " 1. Verify Ollama installation & pull Qwen 2.5 model (qwen2.5:latest)\n"
         " 2. Configure Python virtual environment (interview_ai)\n"
         " 3. Install PyTorch >= 2.4.0 with CUDA 12.4 support explicitly\n"
-        " 4. Install PyAudio, Whisper, Docling, Gradio & UI frameworks\n"
-        " 5. Launch the INTERVION AI interface automatically"
+        " 4. Install FastAPI, Whisper, Docling & Web frameworks\n"
+        " 5. Launch the INTERVION 2.0 Web Server automatically"
     )
     info_box = tk.Label(card, text=info_text, font=("Segoe UI", 9), fg="#BAC2DE", bg=card_bg, justify="left")
     info_box.pack(anchor="w", pady=(15, 0))
@@ -148,7 +148,7 @@ def run_cli(stats):
     print(f"• Ollama Engine    : {stats['ollama']}")
     print("-" * 65)
     print("Setup will configure virtual environment, install PyTorch 2.4+ CUDA")
-    print("and all required dependencies, then launch ui/app.py.")
+    print("and all required dependencies, then launch FastAPI server.")
     print("="*65)
     ans = input("\nProceed with installation? (Y/n): ").strip().lower()
     if ans in ("", "y", "yes"):
