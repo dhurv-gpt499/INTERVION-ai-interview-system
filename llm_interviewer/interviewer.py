@@ -48,6 +48,7 @@ class QwenInterviewer:
 
         # load system prompt as first message
         self.messages     = [{"role": "system", "content": system_prompt}]
+        self.messages.append({"role": "user", "content": "Hello. I am ready to start the interview."})
         self.start_time   = time.time()
         self.duration_sec = duration_minutes * 60
         self.turn_count   = 0

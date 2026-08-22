@@ -117,7 +117,7 @@ Resume:
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 payload = {
                     "model": "qwen/qwen3.6-27b",
-                    "messages": [{"role": "system", "content": prompt}],
+                    "messages": [{"role": "user", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.1
                 }
@@ -201,7 +201,7 @@ Resume:
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 payload = {
                     "model": "qwen/qwen3.6-27b",
-                    "messages": [{"role": "system", "content": prompt}],
+                    "messages": [{"role": "user", "content": prompt}],
                     "response_format": {"type": "json_object"},
                     "temperature": 0.0
                 }
