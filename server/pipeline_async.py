@@ -89,18 +89,25 @@ async def handle_interview_session(websocket: WebSocket, config: dict):
                     audio_np = np.frombuffer(audio_bytes, dtype=np.float32)
                     
                     if sm.current_state in (InterviewState.QUESTION_ASKED, InterviewState.LISTENING):
-                        # Run VAD (blocking call but extremely fast, ok for main loop)
-                        tensor = torch.from_numpy(audio_np).float()
-                        with torch.no_grad():
-                            prob = silero_vad(tensor, 16000).item()
-                        
-                        is_speech = prob > segmenter.vad_threshold
-                        if is_speech and sm.current_state == InterviewState.QUESTION_ASKED:
-                            sm.start_answer()
-                            sm.transition(InterviewState.LISTENING)
-                            await notify_state("listening")
+                        # Chunk the incoming audio into exact 512 sample frames for Silero VAD
+                        chunk_size = 512
+                        for i in range(0, len(audio_np), chunk_size):
+                            chunk = audio_np[i:i+chunk_size]
+                            if len(chunk) < chunk_size:
+                                chunk = np.pad(chunk, (0, chunk_size - len(chunk)), 'constant')
                             
-                        segmenter.process_frame(audio_np, prob)
+                            # Use chunk.copy() to fix PyTorch non-writable tensor warning
+                            tensor = torch.from_numpy(chunk.copy()).float()
+                            with torch.no_grad():
+                                prob = silero_vad(tensor, 16000).item()
+                                
+                            is_speech = prob > segmenter.vad_threshold
+                            if is_speech and sm.current_state == InterviewState.QUESTION_ASKED:
+                                sm.start_answer()
+                                sm.transition(InterviewState.LISTENING)
+                                await notify_state("listening")
+                                
+                            segmenter.process_frame(chunk, prob)
                         
                 elif "text" in data:
                     msg = json.loads(data["text"])
