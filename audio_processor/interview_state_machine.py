@@ -27,18 +27,22 @@ class InterviewStateMachine:
         InterviewState.IDLE : [InterviewState.QUESTION_ASKED,
                            InterviewState.AI_SPEAKING],
         InterviewState.QUESTION_ASKED   : [InterviewState.LISTENING,
-                                           InterviewState.NO_ANSWER],
+                                           InterviewState.NO_ANSWER,
+                                           InterviewState.AI_SPEAKING],
         InterviewState.LISTENING        : [InterviewState.CANDIDATE_PAUSED,
                                            InterviewState.ANSWER_COMPLETE,
-                                           InterviewState.EVALUATING],
+                                           InterviewState.EVALUATING,
+                                           InterviewState.AI_SPEAKING],
         InterviewState.CANDIDATE_PAUSED : [InterviewState.LISTENING,
                                            InterviewState.ANSWER_COMPLETE],
-        InterviewState.ANSWER_COMPLETE  : [InterviewState.EVALUATING],
+        InterviewState.ANSWER_COMPLETE  : [InterviewState.EVALUATING,
+                                           InterviewState.AI_SPEAKING],
         InterviewState.NO_ANSWER        : [InterviewState.AI_SPEAKING,
                                            InterviewState.LISTENING],
         InterviewState.EVALUATING       : [InterviewState.AI_SPEAKING],
         InterviewState.AI_SPEAKING      : [InterviewState.QUESTION_ASKED,
-                                           InterviewState.SESSION_COMPLETE],
+                                           InterviewState.SESSION_COMPLETE,
+                                           InterviewState.LISTENING],
         InterviewState.SESSION_COMPLETE : [],
     }
 
@@ -65,13 +69,13 @@ class InterviewStateMachine:
             allowed = self.VALID_TRANSITIONS.get(self.current_state, [])
 
             if new_state not in allowed:
-                print(f"[STATE] Invalid: {self.current_state.value} → {new_state.value}")
+                print(f"[STATE] Invalid: {self.current_state.value} -> {new_state.value}")
                 return False
 
             old = self.current_state.value
             self.current_state = new_state
             self._state_start  = time.time()
-            print(f"[STATE] {old} → {new_state.value}")
+            print(f"[STATE] {old} -> {new_state.value}")
             return True
 
     # ------------------------------------------------------------------

@@ -24,8 +24,8 @@ class ResumeRAG:
 
     def _load_knowledge_graph(self):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rubrics_path = os.path.join(cur_dir, "rubrics_bank.json")
-        companies_path = os.path.join(cur_dir, "company_profiles.json")
+        rubrics_path = os.path.join(cur_dir, "..", "database", "rubrics_bank.json")
+        companies_path = os.path.join(cur_dir, "..", "database", "company_profiles.json")
 
         if os.path.exists(rubrics_path):
             try:
@@ -60,9 +60,18 @@ class ResumeRAG:
     def build_index(self, resume_parsed: dict):
         """
         Takes the enriched parsed resume JSON and builds Engine A (Resume TF-IDF index).
+        Supports both old structured format and new raw_resume format.
         """
         self.resume_chunks = []
-        
+
+        # Handle new raw_resume format: split into paragraphs for indexing
+        if resume_parsed.get("raw_resume"):
+            raw = resume_parsed["raw_resume"]
+            # Split by double newlines or markdown headers to create meaningful chunks
+            paragraphs = [p.strip() for p in raw.split("\n\n") if p.strip() and len(p.strip()) > 20]
+            if paragraphs:
+                self.resume_chunks.extend(paragraphs[:15])  # Cap at 15 chunks
+
         # 1. Enriched Candidate Intelligence Fields
         if resume_parsed.get("candidate_archetype"):
             self.resume_chunks.append(f"Candidate Archetype / Domain: {resume_parsed.get('candidate_archetype')}")
@@ -79,37 +88,46 @@ class ResumeRAG:
         # 2. Standard Resume Sections
         if "experience" in resume_parsed:
             for exp in resume_parsed.get("experience", []):
-                desc = exp.get('description', '')
-                if isinstance(desc, list):
-                    desc = " ".join(desc)
-                self.resume_chunks.append(f"Experience at {exp.get('company', '')} as {exp.get('role', '')}: {desc}")
+                if isinstance(exp, dict):
+                    desc = exp.get('description', '')
+                    if isinstance(desc, list):
+                        desc = " ".join(desc)
+                    self.resume_chunks.append(f"Experience at {exp.get('company', '')} as {exp.get('role', '')}: {desc}")
                 
         if "projects" in resume_parsed:
             for proj in resume_parsed.get("projects", []):
-                desc = proj.get('description', '')
-                if isinstance(desc, list):
-                    desc = " ".join(desc)
-                tech = ", ".join(proj.get('tech_stack', []))
-                self.resume_chunks.append(f"Project {proj.get('name', '')} ({tech}): {desc}")
+                if isinstance(proj, dict):
+                    desc = proj.get('description', '')
+                    if isinstance(desc, list):
+                        desc = " ".join(desc)
+                    tech = ", ".join(proj.get('tech_stack', []))
+                    self.resume_chunks.append(f"Project {proj.get('name', '')} ({tech}): {desc}")
                 
         if "skills" in resume_parsed:
-            skills_dict = resume_parsed.get("skills", {})
+            skills_data = resume_parsed.get("skills", {})
             all_skills = []
-            for k, v in skills_dict.items():
-                if isinstance(v, list):
-                    all_skills.extend(v)
+            if isinstance(skills_data, dict):
+                for k, v in skills_data.items():
+                    if isinstance(v, list):
+                        all_skills.extend(v)
+                    elif isinstance(v, str) and v:
+                        all_skills.append(v)
+            elif isinstance(skills_data, list):
+                all_skills = skills_data
             if all_skills:
-                self.resume_chunks.append(f"Technical Skills: {', '.join(all_skills)}")
+                self.resume_chunks.append(f"Technical Skills: {', '.join(str(s) for s in all_skills)}")
                 
         if "education" in resume_parsed:
             for edu in resume_parsed.get("education", []):
-                self.resume_chunks.append(f"Education: {edu.get('degree', '')} in {edu.get('branch', '')} at {edu.get('institution', '')} (CGPA: {edu.get('cgpa', '')})")
+                if isinstance(edu, dict):
+                    self.resume_chunks.append(f"Education: {edu.get('degree', '')} in {edu.get('branch', '')} at {edu.get('institution', '')} (CGPA: {edu.get('cgpa', '')})")
 
         if "competitive_programming" in resume_parsed:
             cp = resume_parsed.get("competitive_programming", {})
-            cp_str = ", ".join([f"{k}: {v}" for k, v in cp.items() if v])
-            if cp_str:
-                self.resume_chunks.append(f"Competitive Programming Profiles: {cp_str}")
+            if isinstance(cp, dict):
+                cp_str = ", ".join([f"{k}: {v}" for k, v in cp.items() if v])
+                if cp_str:
+                    self.resume_chunks.append(f"Competitive Programming Profiles: {cp_str}")
 
         if not self.resume_chunks:
             self.resume_chunks.append("Resume data is minimal.")

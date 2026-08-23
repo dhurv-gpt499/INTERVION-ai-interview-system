@@ -23,8 +23,8 @@ def build_interviewer_system_prompt(
     weak_str      = ", ".join(past_weak_areas)     or "none"
     covered_str   = ", ".join(past_covered_topics) or "none"
 
-    topics_str = " → ".join(ordered_topics) if ordered_topics else \
-                 "cs fundamentals → projects → skills → behavioural"
+    topics_str = " -> ".join(ordered_topics) if ordered_topics else \
+                 "cs fundamentals -> projects -> skills -> behavioural"
 
     # Determine Company Persona
     quant_firms = ["de shaw", "citadel", "two sigma", "jane street", "jump trading", "tower research", "arcesium", "worldquant", "trexquant", "goldman sachs", "morgan stanley"]
@@ -61,14 +61,30 @@ def build_interviewer_system_prompt(
             print(f"Error loading question bank: {e}")
 
     r = resume_parsed or {}
-    profile = (
-        f"Education: {r.get('education', '')}\n"
-        f"Skills: {r.get('skills', '')}\n"
-        f"Experience: {r.get('experience', '')}\n"
-        f"Projects: {r.get('projects', '')}\n"
-        f"Achievements: {r.get('achievements', '')}\n"
-        f"CP: {r.get('competitive', '')}"
-    )
+    attack_plan = r.get("attack_plan", {})
+    
+    if r.get('raw_resume'):
+        profile = f"RAW RESUME TEXT:\n{r.get('raw_resume')}"
+    else:
+        profile = (
+            f"Education: {r.get('education', '')}\n"
+            f"Skills: {r.get('skills', '')}\n"
+            f"Experience: {r.get('experience', '')}\n"
+            f"Projects: {r.get('projects', '')}\n"
+            f"Achievements: {r.get('achievements', '')}\n"
+            f"CP: {r.get('competitive', '')}"
+        )
+        
+    if attack_plan:
+        profile += "\n\n[OMNIPOTENT ATTACK PLAN - STRICTLY FOLLOW THIS]:\n"
+        profile += f"Targeted Weaknesses: {', '.join(attack_plan.get('candidate_weaknesses', []))}\n"
+        profile += f"Claims to Expose: {', '.join(attack_plan.get('exaggerated_claims_to_probe', []))}\n"
+        profile += f"Hostile Interrogation Strategy: {attack_plan.get('interrogation_strategy', '')}\n"
+        
+        # Override topics if attack plan suggested better ones
+        if attack_plan.get('recommended_topics'):
+            ordered_topics = attack_plan.get('recommended_topics')
+            topics_str = " -> ".join(ordered_topics)
 
     first_topic = ordered_topics[0] if ordered_topics else "technical fundamentals"
 

@@ -1,0 +1,161 @@
+{
+  "concurrency_locks": {
+    "domain": "Core CS & OS",
+    "keywords": ["mutex", "semaphore", "deadlock", "spinlock", "condition variable"],
+    "core_question": "Explain the difference between a Mutex and a Spinlock, and when you would use one over the other.",
+    "evaluation_rubric": [
+      "Must state that Mutex puts thread to sleep (context switch) while Spinlock burns CPU cycles in a while-loop.",
+      "Must identify that Spinlocks are only better for extremely short wait times where a context switch is more expensive than spinning."
+    ],
+    "follow_up_probe": "What happens if a thread holding a spinlock is preempted by the OS scheduler? How does this lead to priority inversion?"
+  },
+  "distributed_consensus": {
+    "domain": "Distributed Systems",
+    "keywords": ["paxos", "raft", "zookeeper", "leader election", "split brain", "quorum"],
+    "core_question": "Explain how the Raft consensus algorithm prevents a split-brain scenario during a network partition.",
+    "evaluation_rubric": [
+      "Must explain the concept of a Quorum (majority vote, N/2 + 1).",
+      "Must state that a minority partition cannot elect a leader because it cannot achieve a quorum.",
+      "Should mention Term Numbers increasing."
+    ],
+    "follow_up_probe": "How does Raft handle a situation where a partitioned old leader reconnects with a higher term number?"
+  },
+  "api_idempotency_keys": {
+    "domain": "Backend Engineering",
+    "keywords": ["idempotency", "stripe", "api", "retry", "network failure", "duplicate payment"],
+    "core_question": "If a client sends a payment request and their network drops before receiving the 200 OK, how do you prevent them from being charged twice when they retry?",
+    "evaluation_rubric": [
+      "Must mention using an Idempotency Key passed in the request header.",
+      "Must explain storing this key in a database (like Redis or Postgres) alongside the transaction state (Pending/Success).",
+      "If the key exists and state is Success, return the cached response without processing."
+    ],
+    "follow_up_probe": "What happens if two requests with the same idempotency key hit your load balancer at the exact same millisecond?"
+  },
+  "db_acid_transactions": {
+    "domain": "Database Internals",
+    "keywords": ["acid", "isolation level", "dirty read", "phantom read", "mvcc", "postgres"],
+    "core_question": "What is the difference between Read Committed and Repeatable Read isolation levels?",
+    "evaluation_rubric": [
+      "Must state Read Committed prevents dirty reads but allows non-repeatable reads.",
+      "Must state Repeatable Read guarantees that reading the same row twice in a transaction yields the exact same data.",
+      "Bonus if they mention MVCC (Multi-Version Concurrency Control) creating snapshots."
+    ],
+    "follow_up_probe": "Does Repeatable Read prevent Phantom Reads in Postgres? Why or why not?"
+  },
+  "react_internals": {
+    "domain": "Frontend Engineering",
+    "keywords": ["react", "virtual dom", "reconciliation", "fiber", "render cycle"],
+    "core_question": "Explain the React Reconciliation process and how the Fiber architecture changed it.",
+    "evaluation_rubric": [
+      "Must mention diffing the Virtual DOM against the real DOM.",
+      "Must explain that Fiber introduced interruptible rendering (pausing work to yield to the main thread).",
+      "Must explain the use of 'keys' in lists for O(N) diffing."
+    ],
+    "follow_up_probe": "What exactly happens internally when you call setState? Walk me through the batching process."
+  },
+  "cpp_memory_management": {
+    "domain": "Systems Programming",
+    "keywords": ["c++", "smart pointers", "raii", "memory leak", "unique_ptr", "shared_ptr", "vtable"],
+    "core_question": "Explain RAII and how std::shared_ptr is implemented under the hood.",
+    "evaluation_rubric": [
+      "Must define RAII: Resource Acquisition Is Initialization (destructor cleans up).",
+      "Must explain that shared_ptr maintains a dynamically allocated control block with a reference count.",
+      "Must mention atomic operations on the reference count."
+    ],
+    "follow_up_probe": "Why is std::shared_ptr thread-safe for the reference count but NOT for the underlying object it points to?"
+  },
+  "tcp_ip_internals": {
+    "domain": "Networking",
+    "keywords": ["tcp", "udp", "handshake", "congestion control", "sliding window", "packet loss"],
+    "core_question": "Describe the TCP 3-way handshake and how TCP handles network congestion.",
+    "evaluation_rubric": [
+      "Must state SYN, SYN-ACK, ACK.",
+      "Must explain Congestion Control: Slow Start (exponential growth) and Congestion Avoidance (linear growth).",
+      "Must mention shrinking the sliding window upon detecting packet loss."
+    ],
+    "follow_up_probe": "What is the TCP TIME_WAIT state and why is it dangerous for high-throughput microservices?"
+  },
+  "kafka_streaming": {
+    "domain": "Data Engineering & Systems",
+    "keywords": ["kafka", "message broker", "consumer group", "partition", "offset", "zookeeper"],
+    "core_question": "How does Kafka guarantee ordering of messages, and what are the limitations?",
+    "evaluation_rubric": [
+      "Must state that ordering is ONLY guaranteed within a single Partition, not across the whole topic.",
+      "Must explain that to guarantee order for a specific user, you must use a routing key (like UserID) so their messages hash to the same partition."
+    ],
+    "follow_up_probe": "If you add a new partition to a topic, what happens to the hashing and message ordering?"
+  },
+  "machine_learning_overfitting": {
+    "domain": "Machine Learning",
+    "keywords": ["overfitting", "regularization", "dropout", "l1 l2", "bias variance tradeoff"],
+    "core_question": "How do you detect overfitting in a deep neural network, and what specific techniques would you use to fix it?",
+    "evaluation_rubric": [
+      "Must state detecting it via plotting Training Loss vs Validation Loss (training goes down, validation goes up).",
+      "Must list solutions: Dropout layers, L1/L2 Regularization (Weight Decay), Early Stopping, or Data Augmentation."
+    ],
+    "follow_up_probe": "Why exactly does Dropout work? Does it behave the same during inference as it does during training?"
+  },
+  "docker_kubernetes": {
+    "domain": "DevOps & Cloud",
+    "keywords": ["docker", "kubernetes", "cgroups", "namespaces", "pod", "deployment", "service"],
+    "core_question": "What Linux primitives make Docker containers possible, and how does a Kubernetes Service route traffic to Pods?",
+    "evaluation_rubric": [
+      "Must mention Namespaces (for isolation of PID, Net, Mount) and cgroups (for resource limiting CPU/RAM).",
+      "Must explain that kube-proxy manipulates iptables/IPVS to route the virtual Service IP to a dynamic Pod IP."
+    ],
+    "follow_up_probe": "If a Pod runs out of memory (OOMKilled), does Kubernetes automatically restart it? How does the Readiness Probe play into this?"
+  },
+  "os_scheduling": {
+    "domain": "Operating Systems",
+    "keywords": ["scheduler", "cfs", "time slice", "preemption", "priority", "thread"],
+    "core_question": "Explain how the Completely Fair Scheduler (CFS) in Linux works.",
+    "evaluation_rubric": [
+      "Must mention the concept of 'vruntime' (virtual runtime).",
+      "Must explain that it uses a Red-Black Tree to pick the task with the lowest vruntime.",
+      "Must explain that it does not use rigid time slices, but proportions of CPU time."
+    ],
+    "follow_up_probe": "How does a 'nice' value interact with vruntime in CFS?"
+  },
+  "caching_strategies": {
+    "domain": "System Design",
+    "keywords": ["cache", "redis", "memcached", "write-through", "write-back", "cache stampede"],
+    "core_question": "Explain the difference between Write-Through and Write-Back caching. What is a Cache Stampede (Thundering Herd)?",
+    "evaluation_rubric": [
+      "Write-Through writes to DB and Cache simultaneously. Write-Back writes to Cache, and async flushes to DB later.",
+      "Cache Stampede is when a highly popular key expires, and thousands of concurrent requests all miss the cache and hit the DB at once."
+    ],
+    "follow_up_probe": "How do you mitigate a Cache Stampede for a highly viral tweet?"
+  },
+  "db_sharding": {
+    "domain": "Database Architecture",
+    "keywords": ["sharding", "partitioning", "consistent hashing", "hotspot", "horizontal scaling"],
+    "core_question": "If you are sharding a user database, how do you choose a shard key, and what is Consistent Hashing?",
+    "evaluation_rubric": [
+      "Must state that a shard key should distribute data evenly to avoid 'hotspots' (e.g. hashing UserID).",
+      "Must explain Consistent Hashing as a ring topology where nodes and keys are hashed to the same space, minimizing data movement when a node is added/removed."
+    ],
+    "follow_up_probe": "How do you handle queries that need to join data across two different shards?"
+  },
+  "probability_expected_value": {
+    "domain": "Quantitative Finance",
+    "keywords": ["probability", "expected value", "markov chain", "martingale", "variance"],
+    "core_question": "You roll a fair 6-sided die. You can choose to stop and take a payout equal to the roll, or pay $1 to roll again (infinitely). What is your optimal strategy and expected payout?",
+    "evaluation_rubric": [
+      "Candidate must set up an equation: E = max(Roll, E - 1).",
+      "They must work backwards or test thresholds (e.g. stop on 5 or 6, stop on 6).",
+      "Must demonstrate rigorous mathematical logic, not just guessing."
+    ],
+    "follow_up_probe": "What if the cost to roll again increases by $1 each time?"
+  },
+  "system_design_scalability": {
+    "domain": "System Design",
+    "keywords": ["load balancer", "microservices", "horizontal scaling", "vertical scaling", "bottlenecks"],
+    "core_question": "How do you scale a stateful monolithic application to handle 10x traffic?",
+    "evaluation_rubric": [
+      "Must mention extracting state (sessions) out of the app layer into Redis/Memcached.",
+      "Must mention putting a Load Balancer in front and scaling the app layer horizontally.",
+      "Must mention scaling the database via Read Replicas, Caching, or Sharding."
+    ],
+    "follow_up_probe": "If you add Read Replicas, how do you handle replication lag where a user updates their profile and doesn't see the change?"
+  }
+}

@@ -68,7 +68,7 @@ class STTEngine:
                 "response_format": "json",
                 "language": "en"
             }
-            response = requests.post(url, headers=headers, files=files, data=data, timeout=5)
+            response = requests.post(url, headers=headers, files=files, data=data, timeout=15)
             response.raise_for_status()
             
             return response.json().get("text", "").strip()

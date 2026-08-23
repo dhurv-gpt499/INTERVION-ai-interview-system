@@ -8,15 +8,18 @@
 }
 
 .orb {
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #4ade80 0%, #16a34a 100%);
     box-shadow: 
-        0 0 20px rgba(74, 222, 128, 0.5),
-        inset 0 0 20px rgba(255, 255, 255, 0.5);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        0 0 30px rgba(74, 222, 128, 0.4),
+        inset 0 0 30px rgba(255, 255, 255, 0.6);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .orb::before, .orb::after {
@@ -28,86 +31,95 @@
     border-radius: 50%;
     z-index: -1;
     pointer-events: none;
+    transition: all 0.5s ease;
 }
 
 .orb-idle {
-    background: radial-gradient(circle at 30% 30%, #94a3b8 0%, #475569 100%);
-    box-shadow: 0 0 15px rgba(148, 163, 184, 0.4);
-    animation: pulse-idle 4s infinite ease-in-out;
+    background: radial-gradient(circle at 30% 30%, #94a3b8 0%, #334155 100%);
+    box-shadow: 0 0 20px rgba(148, 163, 184, 0.2);
+    animation: float-idle 5s infinite ease-in-out;
 }
 
 .orb-listening {
-    background: radial-gradient(circle at 30% 30%, #60a5fa 0%, #2563eb 100%);
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.7);
-    animation: pulse-listening 2s infinite ease-in-out;
+    background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #1e3a8a 100%);
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.4);
+    animation: float-listening 3s infinite ease-in-out;
 }
 .orb-listening::before {
-    width: 140px;
-    height: 140px;
-    background: rgba(59, 130, 246, 0.3);
-    animation: ripple 2s infinite ease-out;
+    width: 170px;
+    height: 170px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%);
+    animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+.orb-listening::after {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+    animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1) 0.5s;
 }
 
 .orb-thinking {
-    background: radial-gradient(circle at 30% 30%, #c084fc 0%, #7e22ce 100%);
-    box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
-    animation: spin-pulse 3s infinite linear;
+    background: conic-gradient(from 0deg, #c084fc, #9333ea, #c084fc);
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.7);
+    animation: spin-thinking 2s infinite linear;
 }
 .orb-thinking::before {
-    width: 100%;
-    height: 100%;
-    border: 2px dashed rgba(168, 85, 247, 0.5);
-    animation: spin-reverse 4s infinite linear;
+    content: '';
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at 30% 30%, #a855f7, #6b21a8);
+    position: absolute;
+    border-radius: 50%;
 }
 
 .orb-talking {
-    background: radial-gradient(circle at 30% 30%, #34d399 0%, #059669 100%);
-    box-shadow: 0 0 50px rgba(16, 185, 129, 0.9);
-    animation: pulse-talking 0.6s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+    background: radial-gradient(circle at 40% 40%, #10b981 0%, #064e3b 100%);
+    box-shadow: 0 0 60px rgba(16, 185, 129, 1), inset 0 0 30px rgba(255, 255, 255, 0.6);
+    animation: waveform-pulse 0.4s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
 }
 .orb-talking::before {
-    width: 130px;
-    height: 130px;
-    background: rgba(16, 185, 129, 0.4);
-    animation: ripple-fast 0.6s infinite alternate;
+    width: 180px;
+    height: 180px;
+    border: 3px solid rgba(16, 185, 129, 0.5);
+    animation: expand-fade 0.8s infinite linear;
+}
+.orb-talking::after {
+    width: 220px;
+    height: 220px;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    animation: expand-fade 0.8s infinite linear 0.4s;
 }
 
-@keyframes pulse-idle {
-    0% { transform: scale(0.95); opacity: 0.8; }
-    50% { transform: scale(1.02); opacity: 1; }
-    100% { transform: scale(0.95); opacity: 0.8; }
+@keyframes float-idle {
+    0% { transform: translateY(0px) scale(0.98); opacity: 0.8; }
+    50% { transform: translateY(-10px) scale(1.02); opacity: 1; }
+    100% { transform: translateY(0px) scale(0.98); opacity: 0.8; }
 }
 
-@keyframes pulse-listening {
-    0% { transform: scale(0.95); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
-    50% { transform: scale(1.1); box-shadow: 0 0 60px rgba(59, 130, 246, 1); }
-    100% { transform: scale(0.95); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+@keyframes float-listening {
+    0% { transform: translateY(0px) scale(0.95); }
+    50% { transform: translateY(-5px) scale(1.05); }
+    100% { transform: translateY(0px) scale(0.95); }
 }
 
-@keyframes pulse-talking {
-    0% { transform: scale(1); box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
-    100% { transform: scale(1.15); box-shadow: 0 0 80px rgba(16, 185, 129, 1); }
+@keyframes pulse-ring {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
 }
 
-@keyframes spin-pulse {
-    0% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(0.95) rotate(180deg); opacity: 0.8;}
-    100% { transform: scale(1) rotate(360deg); }
+@keyframes waveform-pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.4); filter: brightness(0.9); }
+    100% { transform: scale(1.15); box-shadow: 0 0 80px rgba(16, 185, 129, 1), inset 0 0 40px rgba(255, 255, 255, 0.8); filter: brightness(1.2); }
 }
 
-@keyframes spin-reverse {
-    0% { transform: translate(-50%, -50%) rotate(360deg); }
-    100% { transform: translate(-50%, -50%) rotate(0deg); }
+@keyframes spin-thinking {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-@keyframes ripple {
-    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-}
-
-@keyframes ripple-fast {
-    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.2; }
+@keyframes expand-fade {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; border-width: 4px; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; border-width: 1px; }
 }
 
 /* Custom Scrollbar */

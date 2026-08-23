@@ -125,11 +125,15 @@ class QwenInterviewer:
             try:
                 fb_response = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "qwen/qwen3.6-27b", "messages": messages_payload, "stream": True, "temperature": 0.7},
+                    json={"model": "openai/gpt-oss-120b", "messages": messages_payload, "stream": True, "temperature": 0.7},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                    stream=True, timeout=10
+                    stream=True, timeout=30
                 )
                 fb_response.raise_for_status()
+                
+                in_think = False
+                buffer = ""
+                
                 for line in fb_response.iter_lines():
                     if line:
                         decoded = line.decode('utf-8')
@@ -138,17 +142,61 @@ class QwenInterviewer:
                             if data_str.strip() == "[DONE]": break
                             try:
                                 token = json.loads(data_str)["choices"][0].get("delta", {}).get("content", "")
-
                                 if token:
                                     full_response += token
-                                    yield token
+                                    buffer += token
+                                    
+                                    # Very naive stripping (assuming <think> is mostly whole tokens, or we just accumulate)
+                                    # Actually, let's just do a proper streaming string replace
+                                    
+                                    while buffer:
+                                        if not in_think:
+                                            start = buffer.find("<think>")
+                                            if start != -1:
+                                                yield buffer[:start]
+                                                yield "<THINKING>"
+                                                buffer = buffer[start+7:]
+                                                in_think = True
+                                            else:
+                                                # Check for partial match at end
+                                                partial = False
+                                                for i in range(1, 7):
+                                                    if buffer.endswith("<think>"[:i]):
+                                                        yield buffer[:-i]
+                                                        buffer = buffer[-i:]
+                                                        partial = True
+                                                        break
+                                                if not partial:
+                                                    yield buffer
+                                                    buffer = ""
+                                                    
+                                        else:
+                                            end = buffer.find("</think>")
+                                            if end != -1:
+                                                buffer = buffer[end+8:]
+                                                in_think = False
+                                            else:
+                                                partial = False
+                                                for i in range(1, 8):
+                                                    if buffer.endswith("</think>"[:i]):
+                                                        buffer = buffer[-i:]
+                                                        partial = True
+                                                        break
+                                                if not partial:
+                                                    buffer = ""
                             except Exception: pass
             except Exception as e:
                 yield f"Cloud API Error: {e}"
                 return
             
-            self.messages.append({"role": "assistant", "content": full_response})
-            if "That concludes our interview" in full_response:
+            if buffer and not in_think and "<" not in buffer:
+                yield buffer
+            
+            # Strip think tags from history to avoid polluting context
+            import re as _re
+            clean_response = _re.sub(r'<think>.*?</think>', '', full_response, flags=_re.DOTALL).strip()
+            self.messages.append({"role": "assistant", "content": clean_response})
+            if "That concludes our interview" in clean_response:
                 self.is_active = False
             return
 
@@ -171,17 +219,57 @@ class QwenInterviewer:
             )
             response.raise_for_status()
 
+            in_think = False
+            buffer = ""
             for line in response.iter_lines():
                 if not line:
                     continue
 
                 chunk = json.loads(line)
                 token = chunk.get("message", {}).get("content", "")
-                full_response += token
-                yield token
+                if token:
+                    full_response += token
+                    buffer += token
+                    
+                    while buffer:
+                        if not in_think:
+                            start = buffer.find("<think>")
+                            if start != -1:
+                                yield buffer[:start]
+                                yield "<THINKING>"
+                                buffer = buffer[start+7:]
+                                in_think = True
+                            else:
+                                partial = False
+                                for i in range(1, 7):
+                                    if buffer.endswith("<think>"[:i]):
+                                        yield buffer[:-i]
+                                        buffer = buffer[-i:]
+                                        partial = True
+                                        break
+                                if not partial:
+                                    yield buffer
+                                    buffer = ""
+                        else:
+                            end = buffer.find("</think>")
+                            if end != -1:
+                                buffer = buffer[end+8:]
+                                in_think = False
+                            else:
+                                partial = False
+                                for i in range(1, 8):
+                                    if buffer.endswith("</think>"[:i]):
+                                        buffer = buffer[-i:]
+                                        partial = True
+                                        break
+                                if not partial:
+                                    buffer = ""
 
                 if chunk.get("done", False):
                     break
+                    
+            if buffer and not in_think and "<" not in buffer:
+                yield buffer
 
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.HTTPError):
             import os
@@ -192,7 +280,7 @@ class QwenInterviewer:
 
             fallback_url = "https://api.groq.com/openai/v1/chat/completions"
             fallback_payload = {
-                "model": "qwen/qwen3.6-27b",
+                "model": "openai/gpt-oss-120b",
                 "messages": messages_payload,
                 "stream": True,
                 "temperature": 0.7
@@ -227,12 +315,33 @@ class QwenInterviewer:
             yield f"Error: {e}"
             return
 
+        # Strip think tags from history to avoid polluting context
+        import re as _re
+        clean_response = _re.sub(r'<think>.*?</think>', '', full_response, flags=_re.DOTALL).strip()
+        
         # save full response to history
-        self.messages.append({"role": "assistant", "content": full_response})
+        self.messages.append({"role": "assistant", "content": clean_response})
 
         # check if interview concluded
-        if "That concludes our interview" in full_response:
+        if "That concludes our interview" in clean_response:
             self.is_active = False
+
+    def truncate_last_response(self, spoken_text: str):
+        """
+        Called when the user interrupts the AI. 
+        Replaces the AI's last fully-generated message with only what was actually spoken,
+        so the LLM doesn't hallucinate that it finished its sentence.
+        """
+        if not self.messages or self.messages[-1]["role"] != "assistant":
+            return
+            
+        # Append a note so the LLM knows why it was cut off
+        corrected_text = spoken_text.strip()
+        if not corrected_text.endswith((".", "?", "!")):
+            corrected_text += "..."
+        corrected_text += "\n\n[SYSTEM NOTE: THE CANDIDATE INTERRUPTED YOU MID-SENTENCE HERE. ADDRESS THEIR INTERRUPTION DIRECTLY.]"
+        
+        self.messages[-1]["content"] = corrected_text
 
 
     def is_time_up(self) -> bool:

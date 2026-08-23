@@ -50,7 +50,7 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             try:
                 res = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "qwen/qwen3.6-27b", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=20
                 )
                 res.raise_for_status()
@@ -63,7 +63,6 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             "model": MODEL_NAME,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",
             "options": {
                 "temperature": 0.2 # low temp for consistent JSON
             }
@@ -74,6 +73,13 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             response.raise_for_status()
             data = response.json()
             content = data.get("message", {}).get("content", "{}")
+            
+            # Robust JSON extraction handling Qwen's <think> tags and markdown blocks
+            import re
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
             return json.loads(content)
         except requests.exceptions.ConnectionError:
             import os
@@ -81,9 +87,8 @@ If the candidate's answer is very short, missing key details, or they seem stuck
             if api_key:
                 fallback_url = "https://api.groq.com/openai/v1/chat/completions"
                 fallback_payload = {
-                    "model": "qwen/qwen3.6-27b",
+                    "model": "openai/gpt-oss-120b",
                     "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
                     "temperature": 0.2
                 }
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -198,7 +203,7 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             try:
                 res = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
-                    json={"model": "qwen/qwen3.6-27b", "messages": [{"role": "user", "content": prompt}], "response_format": {"type": "json_object"}, "temperature": 0.2},
+                    json={"model": "openai/gpt-oss-120b", "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, timeout=45
                 )
                 res.raise_for_status()
@@ -211,7 +216,6 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             "model": MODEL_NAME,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",
             "options": {
                 "temperature": 0.2,
                 "num_ctx": 8192
@@ -224,7 +228,16 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             response.raise_for_status()
             data = response.json()
             content = data.get("message", {}).get("content", "{}")
-            report = json.loads(content)
+            
+            # Robust JSON extraction handling Qwen's <think> tags and markdown blocks
+            import re
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                report = json.loads(match.group(0))
+            else:
+                report = json.loads(content)
+                
             print(f"[EVALUATOR] Final evaluation complete -> Score: {report.get('overall_score')}/100 | Verdict: {report.get('verdict')}")
             return report
         except requests.exceptions.ConnectionError:
@@ -233,9 +246,8 @@ You MUST respond with ONLY a valid JSON object matching this exact schema:
             if api_key:
                 fallback_url = "https://api.groq.com/openai/v1/chat/completions"
                 fallback_payload = {
-                    "model": "qwen/qwen3.6-27b",
+                    "model": "openai/gpt-oss-120b",
                     "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
                     "temperature": 0.2
                 }
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}

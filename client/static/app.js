@@ -11,7 +11,9 @@ const statusBadge = document.getElementById("status-badge");
 let ws = null;
 let mediaRecorder = null;
 let audioContext = null;
+let isFinished = false;
 let nextPlayTime = 0;
+let activeSources = [];
 
 setupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -60,47 +62,69 @@ async function startInterview(config) {
     ws = new WebSocket(`${protocol}//${window.location.host}/api/interview`);
     
     ws.onopen = async () => {
-        statusBadge.textContent = "Connected";
-        statusBadge.className = "px-3 py-1 rounded-full bg-green-600 text-white text-sm";
+        statusBadge.textContent = "Analyzing Resume & Formulating Strategy...";
+        statusBadge.className = "px-3 py-1 rounded-full bg-purple-600 text-white text-sm font-semibold animate-pulse";
         // Send config
         ws.send(JSON.stringify(config));
         
         // Setup Mic
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: true, noiseSuppression: true }, 
+                video: false 
+            });
             
-            mediaRecorder.ondataavailable = async (e) => {
-                if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-                    // Convert WebM to raw PCM 16kHz via AudioContext
-                    const arrayBuffer = await e.data.arrayBuffer();
-                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                    // Extract channel 0
-                    const pcmData = audioBuffer.getChannelData(0);
+            const source = audioContext.createMediaStreamSource(stream);
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+            
+            // Zero gain node to prevent echo loop while keeping the graph active
+            const zeroGain = audioContext.createGain();
+            zeroGain.gain.value = 0;
+            
+            source.connect(processor);
+            processor.connect(zeroGain);
+            zeroGain.connect(audioContext.destination);
+            
+            processor.onaudioprocess = (e) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    const inputData = e.inputBuffer.getChannelData(0);
                     
                     // Downsample to 16kHz
                     const targetSampleRate = 16000;
-                    const ratio = audioBuffer.sampleRate / targetSampleRate;
-                    const newLength = Math.round(pcmData.length / ratio);
-                    const result = new Float32Array(newLength);
+                    const ratio = audioContext.sampleRate / targetSampleRate;
                     
-                    for (let i = 0; i < newLength; i++) {
-                        result[i] = pcmData[Math.round(i * ratio)];
+                    let result;
+                    if (ratio > 1.01 || ratio < 0.99) {
+                        const newLength = Math.round(inputData.length / ratio);
+                        result = new Float32Array(newLength);
+                        for (let i = 0; i < newLength; i++) {
+                            result[i] = inputData[Math.round(i * ratio)];
+                        }
+                    } else {
+                        result = new Float32Array(inputData);
                     }
                     
-                    // Send to WS
                     ws.send(result.buffer);
                 }
             };
             
-            // Collect chunks every 250ms
-            mediaRecorder.start(250);
+            // Polyfill for mediaRecorder.stop()
+            mediaRecorder = {
+                stop: () => {
+                    processor.disconnect();
+                    zeroGain.disconnect();
+                    source.disconnect();
+                    stream.getTracks().forEach(t => t.stop());
+                }
+            };
             
         } catch (err) {
             alert("Microphone access denied or error: " + err);
         }
     };
     
+    let expectingPlaybackComplete = false;
+
     ws.onmessage = async (event) => {
         if (event.data instanceof Blob) {
             // Received TTS Audio
@@ -112,11 +136,20 @@ async function startInterview(config) {
                 
                 const currentTime = audioContext.currentTime;
                 if (nextPlayTime < currentTime) {
-                    nextPlayTime = currentTime;
+                    nextPlayTime = currentTime + 0.1;
                 }
                 
                 source.start(nextPlayTime);
                 nextPlayTime += buffer.duration;
+                
+                activeSources.push(source);
+                source.onended = () => {
+                    activeSources = activeSources.filter(s => s !== source);
+                    if (activeSources.length === 0 && expectingPlaybackComplete) {
+                        expectingPlaybackComplete = false;
+                        ws.send(JSON.stringify({type: "playback_complete"}));
+                    }
+                };
             });
             return;
         }
@@ -128,46 +161,89 @@ async function startInterview(config) {
             addTranscript(msg.text, msg.is_final);
         } else if (msg.type === "report") {
             showReport(msg.report);
+        } else if (msg.type === "interrupt") {
+            expectingPlaybackComplete = false;
+            activeSources.forEach(s => {
+                try { s.stop(); } catch (e) {}
+            });
+            activeSources = [];
+            if (audioContext) {
+                nextPlayTime = audioContext.currentTime;
+            } else {
+                nextPlayTime = 0;
+            }
+        } else if (msg.type === "vision") {
+            const badge = document.getElementById("vision-badge");
+            if (badge) {
+                badge.classList.remove("hidden");
+                badge.textContent = `Anxiety: ${Math.round(msg.anxiety)}% | Conf: ${Math.round(msg.confidence)}%`;
+                
+                // Change color based on anxiety
+                if (msg.anxiety > 60) {
+                    badge.className = "px-3 py-1 rounded-full bg-red-600 text-white text-sm font-medium transition-all duration-300";
+                } else if (msg.anxiety > 30) {
+                    badge.className = "px-3 py-1 rounded-full bg-yellow-600 text-white text-sm font-medium transition-all duration-300";
+                } else {
+                    badge.className = "px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-medium transition-all duration-300";
+                }
+            }
+        } else if (msg.type === "tts_complete") {
+            if (activeSources.length === 0) {
+                ws.send(JSON.stringify({type: "playback_complete"}));
+            } else {
+                expectingPlaybackComplete = true;
+            }
         }
     };
-    
     ws.onclose = () => {
         statusBadge.textContent = "Disconnected";
-        statusBadge.className = "px-3 py-1 rounded-full bg-red-600 text-white text-sm";
+        statusBadge.className = "px-3 py-1 rounded-full bg-gray-600 text-white text-sm";
         if (mediaRecorder) mediaRecorder.stop();
+        
+        // Show disconnected banner only if not gracefully finished
+        if (!isFinished) {
+            const banner = document.createElement("div");
+            banner.className = "fixed top-0 left-0 w-full bg-red-600 text-white text-center py-2 z-50 font-semibold shadow-lg";
+            banner.innerHTML = "Connection lost! The server may have restarted. <a href='/' class='underline hover:text-gray-200'>Click here to refresh</a>.";
+            document.body.appendChild(banner);
+        }
     };
 }
 
 function setOrbState(state) {
-    const textEl = document.getElementById("ai-status-text");
-    if (state === "loading" || state === "evaluating") {
+    const statusBadge = document.getElementById("status-badge");
+    if (state === "loading") {
         orb.className = "orb orb-thinking";
-        textEl.textContent = state === "loading" ? "Thinking..." : "Evaluating...";
+        if (statusBadge) {
+            statusBadge.textContent = "Analyzing Resume & Formulating Strategy...";
+            statusBadge.className = "px-3 py-1 rounded-full bg-purple-600 text-white text-sm font-semibold animate-pulse";
+        }
+    } else if (state === "evaluating") {
+        orb.className = "orb orb-thinking";
+        if (statusBadge) {
+            statusBadge.textContent = "Evaluating Report...";
+            statusBadge.className = "px-3 py-1 rounded-full bg-yellow-600 text-white text-sm";
+        }
     } else if (state === "ai_speaking") {
         orb.className = "orb orb-talking";
-        textEl.textContent = "AI is speaking";
-    } else if (state === "listening") {
+        if (statusBadge) {
+            statusBadge.textContent = "AI Speaking";
+            statusBadge.className = "px-3 py-1 rounded-full bg-blue-600 text-white text-sm";
+        }
+    } else if (state === "question_asked" || state === "listening") {
         orb.className = "orb orb-listening";
-        textEl.textContent = "Listening...";
-    } else if (state === "question_asked") {
-        orb.className = "orb orb-idle";
-        textEl.textContent = "Waiting for you to speak...";
+        if (statusBadge) {
+            statusBadge.textContent = "Listening...";
+            statusBadge.className = "px-3 py-1 rounded-full bg-green-600 text-white text-sm animate-pulse";
+        }
     }
 }
 
 function addTranscript(text, isFinal) {
     if (!text.trim()) return;
     
-    const isAI = text.startsWith("??:");
-    const cleanText = isAI ? text.replace("??:", "").trim() : text;
-    
-    // Update Subtitle Box for AI
-    if (isAI) {
-        const subtitleEl = document.getElementById("ai-status-text");
-        subtitleEl.textContent = cleanText;
-        subtitleEl.className = "text-white text-xl transition-opacity duration-300 font-semibold";
-    }
-
+    const isAI = text.startsWith("AI:");
+    const cleanText = text.replace(/[*_`~#\[\]]/g, "").replace(/AI:/g, "").replace(/You:/g, "").trim();
     const targetBoxId = isAI ? "transcript-interviewer" : "transcript-you";
     const targetBox = document.getElementById(targetBoxId);
     
@@ -214,7 +290,8 @@ document.getElementById("tab-you").addEventListener("click", (e) => {
 });
 
 function showReport(report) {
-    interviewScreen.classList.add("hidden");
+    isFinished = true;
+    document.getElementById("interview-screen").classList.add("hidden");
     reportScreen.classList.remove("hidden");
     
     document.getElementById("report-score").textContent = `${report.overall_score || 0}/100`;

@@ -66,5 +66,24 @@
       "problem_statement": "Explain exactly how a B+ Tree index accelerates a database query. What happens to the B+ Tree when a massive batch of INSERTs occurs, and why is this problematic?",
       "optimal_solution_hints": "B+ Trees keep data in leaf nodes and keys in internal nodes, allowing O(log N) lookups. Massive inserts cause page splits and rebalancing, leading to heavy disk I/O and index fragmentation."
     }
+  ],
+  "react_advanced": [
+    {
+      "title": "Stale Closures in useEffect",
+      "problem_statement": "Explain why a `useEffect` hook with an empty dependency array `[]` might read outdated state from a `useState` variable, and how to fix it without causing infinite re-renders.",
+      "optimal_solution_hints": "The candidate must explain that the effect captures variables from the initial render closure. Solutions: Add state to dependency array (may cause loops), use a ref (`useRef`), or use the functional update form of setState `setCount(c => c + 1)`."
+    },
+    {
+      "title": "Custom React Reconciler",
+      "problem_statement": "If you wanted to render React components to a custom hardware display instead of the DOM, what core React API would you use and how does it separate from react-dom?",
+      "optimal_solution_hints": "Candidate must mention `react-reconciler`. They should explain that React core just generates a tree of elements, while reconcilers (react-dom, react-native, custom) implement the host config (createInstance, appendChild) to actually draw."
+    }
+  ],
+  "cpp_internals": [
+    {
+      "title": "VTable and Dynamic Dispatch",
+      "problem_statement": "Explain exactly how C++ implements polymorphism and virtual functions under the hood. What is the memory and performance overhead?",
+      "optimal_solution_hints": "Must mention the Virtual Method Table (vtable). Each class with virtual functions gets a vtable (array of function pointers). Each object instance gets a hidden `vptr` pointing to this table. Overhead: 8 bytes per object for vptr, plus an extra pointer dereference on function calls."
+    }
   ]
 }

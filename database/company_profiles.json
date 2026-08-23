@@ -1,0 +1,42 @@
+{
+  "Google": {
+    "archetype": "Distributed Systems / Scale / Theoretical CS",
+    "primary_focus": ["system_design_scalability", "graph_algorithms", "distributed_consensus", "concurrency_locks", "cache_coherence"]
+  },
+  "Meta": {
+    "archetype": "Fast Execution / Scale / Product Architecture",
+    "primary_focus": ["social_graph_design", "caching_strategies", "db_sharding", "react_internals", "mobile_scale"]
+  },
+  "Jane Street": {
+    "archetype": "Math / OCaml / Deep OS Internals / Low Latency",
+    "primary_focus": ["cpp_memory_management", "probability_expected_value", "os_scheduling", "cpu_cache_lines", "functional_programming"]
+  },
+  "Citadel": {
+    "archetype": "C++ / High Frequency Trading / Network Hardware",
+    "primary_focus": ["cpp_templates_metaprogramming", "tcp_ip_internals", "kernel_bypass", "lock_free_structures", "time_series_dbs"]
+  },
+  "Amazon": {
+    "archetype": "Microservices / Leadership Principles / Availability",
+    "primary_focus": ["distributed_transactions", "cap_theorem", "dynamodb_patterns", "event_driven_architecture", "object_storage"]
+  },
+  "Netflix": {
+    "archetype": "Chaos Engineering / Streaming / Cloud Native",
+    "primary_focus": ["cdn_architecture", "resilience_engineering", "video_encoding", "grpc_protobuf", "microservices_mesh"]
+  },
+  "Uber": {
+    "archetype": "Geospatial / Real-Time Dispatch / Analytics",
+    "primary_focus": ["quadtrees_geohashing", "kafka_streaming", "real_time_websockets", "pricing_algorithms", "eta_prediction"]
+  },
+  "Apple": {
+    "archetype": "Hardware-Software Integration / Security / C",
+    "primary_focus": ["c_pointers_memory", "os_security_sandboxing", "embedded_systems", "gpu_compute", "crypto_primitives"]
+  },
+  "Stripe": {
+    "archetype": "API Design / Idempotency / Financial Ledger",
+    "primary_focus": ["api_idempotency_keys", "db_acid_transactions", "double_entry_accounting", "ruby_rails_scale", "webhook_delivery"]
+  },
+  "General": {
+    "archetype": "Modern Stack / Fullstack / Agile",
+    "primary_focus": ["rest_api_design", "react_state", "sql_vs_nosql", "ci_cd_pipelines", "docker_kubernetes"]
+  }
+}

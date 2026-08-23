@@ -26,210 +26,67 @@ def extract_text(pdf_path: str) -> str:
 
 
 def llm_extract(markdown_text: str, llm_backend: str = "Local (Ollama)", api_key: str = "") -> dict:
-    """Send markdown to LLM to extract structured JSON."""
+    """Extract just the skills to support RAG, and pass the raw resume directly to avoid JSON hell."""
     
-    prompt = f"""You are a resume parser. Extract information from the resume markdown below and return ONLY a valid JSON object. No explanation, no markdown, no code blocks. Just raw JSON.
-
-Important rules:
-- Return ONLY the JSON object, nothing before or after it
-- For skills languages: include ALL programming languages e.g. Python, Java, C++, SQL
-- For skills frameworks: platforms and frameworks e.g. PyTorch, TensorFlow, React, Django
-- For skills tools: tools only e.g. Git, Docker, VS Code, Linux
-- For skills databases: only databases e.g. Oracle, PostgreSQL, MongoDB
-- For skills cloud: only cloud platforms e.g. AWS, Azure, GCP
-- CGPA is out of 10 e.g. 8.3. Percentage is out of 100 e.g. 74.0. Never mix them. If value above 20 it is percentage
-- Extract ALL education entries including school and college
-- Extract ALL work experience entries even if responsibilities are empty
-- For experience year_start extract only start date. For year_end extract only end date or "Present"
-- For project descriptions include every bullet point as separate array item
-- Extract ALL certifications into achievements array as plain strings
-- Extract competitive programming profiles — leetcode, codeforces, hackerrank, codechef usernames
-- For candidate_archetype: classify candidate into exactly ONE primary domain e.g. "Quant & Low-Latency Systems", "Full-Stack Web Development", "AI & Machine Learning", "Data Architecture & ETL", "Cybersecurity", or "General Software Engineering"
-- For flagship_project_tech: extract an array of 5 to 10 core technical keywords from the candidate's #1 most impressive project
-- For probe_targets: identify 2 or 3 vague claims, bold architectural statements, or missing evidence from the resume that a strict FAANG/Quant interviewer should challenge
-- If field is missing use empty string or empty array
-
-Return exactly this structure:
-{{
-  "personal_info": {{
-    "email": "",
-    "phone": "",
-    "github": "",
-    "linkedin": ""
-  }},
-  "candidate_archetype": "",
-  "flagship_project_tech": [],
-  "probe_targets": [],
-  "education": [
-    {{
-      "institution": "",
-      "degree": "",
-      "branch": "",
-      "cgpa": "",
-      "percentage": "",
-      "year_start": "",
-      "year_end": ""
-    }}
-  ],
-  "skills": {{
-    "languages": [],
-    "frameworks": [],
-    "tools": [],
-    "databases": [],
-    "cloud": []
-  }},
-  "experience": [
-    {{
-      "company": "",
-      "role": "",
-      "year_start": "",
-      "year_end": "",
-      "responsibilities": []
-    }}
-  ],
-  "projects": [
-    {{
-      "name": "",
-      "tech_stack": [],
-      "description": [],
-      "github_link": ""
-    }}
-  ],
-  "competitive_programming": {{
-    "leetcode": "",
-    "codeforces": "",
-    "hackerrank": "",
-    "codechef": ""
-  }},
-  "achievements": []
-}}
+    prompt = f"""List the top 10 technical skills, programming languages, and frameworks mentioned in this resume as a comma-separated list. 
+DO NOT OUTPUT JSON. ONLY OUTPUT A COMMA-SEPARATED LIST OF SKILLS. NO OTHER TEXT.
 
 Resume:
 {markdown_text}"""
 
+    text = ""
     if llm_backend == "Cloud API (Groq)":
         if not api_key:
             print("Groq selected but no API key provided. Falling back to Ollama.")
         else:
             try:
                 import os
+                import requests
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                 payload = {
-                    "model": "qwen/qwen3.6-27b",
+                    "model": "openai/gpt-oss-120b",
                     "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
                     "temperature": 0.1
                 }
                 res = requests.post(url, json=payload, headers=headers, timeout=30)
                 res.raise_for_status()
-                return json.loads(res.json()["choices"][0]["message"]["content"], strict=False)
+                text = res.json()["choices"][0]["message"]["content"]
             except Exception as e:
                 print(f"Groq API Error: {e}. Falling back to Ollama.")
 
-    # Fallback / Local (Ollama)
-    payload = {
-        "model": MODEL_NAME,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.1,
-            "num_ctx": 8192
-        }
-    }
-
-    try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=180)
-        response.raise_for_status()
-        
-        raw_response = response.json()["response"].strip()
-        
-        # Clean markdown fences
-        raw_response = re.sub(r'^```json\s*', '', raw_response)
-        raw_response = re.sub(r'^```\s*', '', raw_response)
-        raw_response = re.sub(r'\s*```$', '', raw_response)
-        raw_response = raw_response.strip()
-        
-        # Extract only JSON object
-        start = raw_response.find('{')
-        end = raw_response.rfind('}')
-        if start != -1 and end != -1:
-            raw_response = raw_response[start:end+1]
-        
-        return json.loads(raw_response, strict=False)
-
-    except json.JSONDecodeError as e:
-        print(f"JSON parse error: {e}")
-        print(f"LLM returned: {raw_response[:300]}")
-        return retry_extract(markdown_text, llm_backend, api_key)
-    
-    except requests.exceptions.ConnectionError:
-        print("Ollama not running! Run: ollama serve")
-        return {}
-    
-    except Exception as e:
-        print(f"Extraction error: {e}")
-        return {}
-
-
-def retry_extract(markdown_text: str, llm_backend: str = "Local (Ollama)", api_key: str = "") -> dict:
-    """Fallback with stricter prompt at temperature 0."""
-    
-    prompt = f"""Extract resume data as JSON only. Return nothing except the JSON object.
-
-{{
-  "personal_info": {{"email": "", "phone": "", "github": "", "linkedin": ""}},
-  "candidate_archetype": "",
-  "flagship_project_tech": [],
-  "probe_targets": [],
-  "education": [{{"institution": "", "degree": "", "branch": "", "cgpa": "", "percentage": "", "year_start": "", "year_end": ""}}],
-  "skills": {{"languages": [], "frameworks": [], "tools": [], "databases": [], "cloud": []}},
-  "experience": [{{"company": "", "role": "", "year_start": "", "year_end": "", "responsibilities": []}}],
-  "projects": [{{"name": "", "tech_stack": [], "description": [], "github_link": ""}}],
-  "competitive_programming": {{"leetcode": "", "codeforces": "", "hackerrank": "", "codechef": ""}},
-  "achievements": []
-}}
-
-Resume:
-{markdown_text}"""
-
-    if llm_backend == "Cloud API (Groq)":
-        if api_key:
-            try:
-                import os
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-                payload = {
-                    "model": "qwen/qwen3.6-27b",
-                    "messages": [{"role": "user", "content": prompt}],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.0
-                }
-                res = requests.post(url, json=payload, headers=headers, timeout=30)
-                res.raise_for_status()
-                return json.loads(res.json()["choices"][0]["message"]["content"], strict=False)
-            except Exception as e:
-                print(f"Groq API Error: {e}. Falling back to Ollama.")
-
-    try:
-        response = requests.post(OLLAMA_URL, json={
+    if not text:
+        # Fallback / Local (Ollama)
+        import requests
+        payload = {
             "model": MODEL_NAME,
             "prompt": prompt,
             "stream": False,
-            "options": {"temperature": 0.0, "num_ctx": 8192}
-        }, timeout=180)
-        
-        raw = response.json()["response"].strip()
-        raw = re.sub(r'```(?:json)?', '', raw).strip()
-        start = raw.find('{')
-        end = raw.rfind('}')
-        if start != -1 and end != -1:
-            raw = raw[start:end+1]
-        return json.loads(raw, strict=False)
+            "options": {
+                "temperature": 0.1,
+                "num_ctx": 8192
+            }
+        }
+        try:
+            res = requests.post(OLLAMA_URL, json=payload, timeout=60)
+            res.raise_for_status()
+            text = res.json().get("response", "")
+        except Exception as e:
+            print(f"Extraction error: {e}")
+            text = ""
+            
+    # Clean text
+    import re
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
     
-    except Exception as e:
-        print(f"Retry failed: {e}")
-        return {}
+    skills = [s.strip() for s in text.split(",") if s.strip()]
+    
+    return {
+        "raw_resume": markdown_text,
+        "skills": {"Extracted": skills},
+        "competitive": "leetcode" in markdown_text.lower() or "codeforces" in markdown_text.lower()
+    }
+
 
 def post_process(markdown_text: str, parsed: dict) -> dict:
     """Fix small consistent issues LLM gets wrong."""

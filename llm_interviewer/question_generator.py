@@ -41,10 +41,11 @@ def decide_categories(resume_parsed: dict, target_level: str, preferred_companie
     if resume_parsed.get("competitive"):
         categories["dsa"] += 0.5
 
-    if target_level in ("entry", "intern"):
+    level_lower = target_level.lower() if target_level else ""
+    if "entry" in level_lower or "intern" in level_lower:
         categories["core_cs"] = 2.5
         categories["dbms_sql"] = 2.0
-    elif target_level in ("mid", "senior"):
+    elif "mid" in level_lower or "senior" in level_lower:
         categories["system_design"] += 1.5
 
     if resume_parsed.get("skills"):
